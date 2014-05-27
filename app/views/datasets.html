@@ -5,7 +5,7 @@
         <ul class="nav nav-tabs">
           <li class="active"><a href="#installed" data-toggle="tab" translate>Installed</a></li>
           <li><a href="#datasetsat" data-toggle="tab" translate>Remote datasets</a></li>
-          <!-- <li><a href="#upload" data-toggle="tab" translate>Upload</a></li> -->
+          <li><a href="#upload" data-toggle="tab" translate>Upload</a></li>
         </ul>
         <div class="tab-content">
           <div class="tab-pane active" id="installed">
@@ -29,12 +29,12 @@
                     <td width='20%'><a href='#/datasets/{{data.dataset}}' title='{{data.dataset}}' jq-run='tooltip'>{{data.name}} {{data.version && '(' + data.version + ')'}}</a></td>
 
                     <td class='describe'>
-                      <a ng-href='{{data.metadata.homepage}}' ng-if='data.metadata.homepage' target=_blank><i class='glyphicon glyphicon-info-sign'></i></a> 
+                      <a ng-href='{{data.metadata.homepage}}' ng-if='data.metadata.homepage' target=_blank><i class='glyphicon glyphicon-info-sign'></i></a>
                       <span>{{data.description}}</span>
                     </td>
 
                     <td class='nowrap' width='1%'>
-                      <span class='label' ng-class="{'label-warning': data.status=='importing' || data.status=='pending', 'label-danger': data.status=='failed', 'label-success': data.status=='imported'}">{{data.status}}</span> 
+                      <span class='label' ng-class="{'label-warning': data.status=='importing' || data.status=='pending', 'label-danger': data.status=='failed', 'label-success': data.status=='imported'}">{{data.status}}</span>
                       <small class='text-muted' ng-show="data.imported < 1"> {{(data.imported * 100).toFixed(1)}}%</small>
 
                     </td>
@@ -104,8 +104,8 @@
               <div class='col-sm-6' style='margin-top: 20px;'><input ng-file-select='onFileSelect($files)' type="file"/></div>
             </div>
 
-            <pre style='white-space: pre-wrap' class='pre-scrollable' ng-if='manifest'>{{manifest}}</pre>   
-    
+            <pre style='white-space: pre-wrap' class='pre-scrollable' ng-if='manifest'>{{manifest}}</pre>
+
             <div class='upload' ng-if='uploader.queue.length'>
               <table class="table table-condensed table-hover">
                 <thead>
@@ -120,7 +120,7 @@
                 <tbody>
                     <tr ng-repeat="item in uploader.queue">
                         <td><strong>{{ item.file.name }}</strong></td>
-                        <td ng-show="uploader.isHTML5" nowrap>{{ item.file.size/1024/1024|number:2 }} MB</td>
+                        <td ng-show="uploader.isHTML5" nowrap>{{ item.file.size | bytes }}</td>
                         <td ng-show="uploader.isHTML5">
                             <div class="progress" style="margin-bottom: 0;">
                                 <div class="progress-bar" role="progressbar" ng-style="{ 'width': item.progress + '%' }"></div>
@@ -132,7 +132,7 @@
                             <span ng-show="item.isError"><i class="glyphicon glyphicon-remove"></i></span>
                         </td>
                         <td nowrap>
-                              <span class="glyphicon glyphicon-trash" title='Remove' jq-run='tooltip' ng-click="item.remove()"></span>
+                            <span class="glyphicon glyphicon-trash" title='Remove' jq-run='tooltip' ng-click="uploader.remove(item)"></span>
                         </td>
                     </tr>
                 </tbody>
@@ -140,17 +140,17 @@
 
             <div>
                 <div class='pull-right'>
-                  <button type="button" class="btn btn-default btn-s" 
-                    ng-click="uploader.uploadAll()" ng-disabled="!uploader.getNotUploadedItems().length">
+                  <button type="button" class="btn btn-default btn-s"
+                    ng-click="uploader.startUpload()" ng-disabled="!uploader.getNotUploadedItems().length">
                       <span class="glyphicon glyphicon-upload"></span> Upload
                   </button>
-                  <button type="button" class="btn btn-default btn-s" 
+                  <button type="button" class="btn btn-default btn-s"
                     ng-click="uploader.cancelAll()" ng-disabled="!uploader.isUploading">
                       <span class="glyphicon glyphicon-ban-circle"></span> Cancel
                   </button>
-                  <button type="button" class="btn btn-default btn-s" 
-                    ng-click="uploader.clearQueue()" ng-disabled="!uploader.queue.length">
-                      <span class="glyphicon glyphicon-trash"></span> Clear
+                  <button type="button" class="btn btn-default btn-s"
+                    ng-click="uploader.removeAll()" ng-disabled="!uploader.queue.length">
+                      <span class="glyphicon glyphicon-trash"></span> Remove
                   </button>
                 </div>
             </div>

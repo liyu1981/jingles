@@ -24,7 +24,10 @@
     <!-- build:js scripts/bower_components.js -->
     <!-- bower:js -->
     <script src="bower_components/jquery/jquery.js"></script>
+    <!-- danialfarid-angular-file-upload shim should be placed before angular.js, see https://github.com/danialfarid/angular-file-upload#install -->
+    <script src="bower_components/danialfarid-angular-file-upload/dist/angular-file-upload-shim.js"></script>
     <script src="bower_components/angular/angular.js"></script>
+    <script src="bower_components/danialfarid-angular-file-upload/dist/angular-file-upload.js"></script>
     <script src="bower_components/angular-sanitize/angular-sanitize.js"></script>
     <script src="bower_components/angular-cookies/angular-cookies.js"></script>
     <script src="bower_components/bootstrap/dist/js/bootstrap.js"></script>
@@ -100,8 +103,6 @@
     <script src="bower_components/alertify.js/lib/alertify.min.js"></script>
     <script src="bower_components/msgpack-javascript/msgpack.js"></script>
     <script src="vendor/jquery.simplecolorpicker.js"></script>
-    <script src="bower_components/danialfarid-angular-file-upload/dist/angular-file-upload-shim.js"></script>
-    <script src="bower_components/danialfarid-angular-file-upload/dist/angular-file-upload.js"></script>
     <!-- Taken from https://raw.github.com/mgcrea/angular-strap/master/src/directives/modal.js (Im just using that part of angular-strap.. deleted dependency and changes 'modal hide' => 'modal hidenono + addClass('fade') => addClass('fadenono') -->
     <script type="text/javascript" src="vendor/modal.js"></script>
     <script src="scripts/directives/services.js"></script>

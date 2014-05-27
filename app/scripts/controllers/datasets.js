@@ -3,8 +3,8 @@
 angular.module('fifoApp')
   .controller('DatasetsCtrl', function ($scope, wiggle, datasetsat, status, $upload) {
 
-    $scope.datasetsat = {}
-    $scope.endpoint = Config.datasets
+    $scope.datasetsat = {};
+    $scope.endpoint = Config.datasets;
 
     var _uuid = function() {
         function _p8(s) {
@@ -12,7 +12,7 @@ angular.module('fifoApp')
             return s ? "-" + p.substr(0,4) + "-" + p.substr(4,4) : p ;
         }
         return _p8() + _p8(true) + _p8(true) + _p8();
-    }
+    };
 
     $scope.import = function(uuid) {
         var url = $scope.url
@@ -42,7 +42,7 @@ angular.module('fifoApp')
             body: '<p><font color="red">Warning!</font> you are about to delete dataset <b>' +
                 dataset.name + " v" + dataset.version + " (" + dataset.dataset + ")</b> Are you 100% sure you really want to do this?</p>",
                 ok: function() {
-                    wiggle.datasets.delete({id: dataset.dataset}, 
+                    wiggle.datasets.delete({id: dataset.dataset},
                         function success() {
                             delete $scope.datasets[dataset.dataset]
                             status.success('Dataset deleted.')
@@ -55,7 +55,7 @@ angular.module('fifoApp')
                         function error(e) {
                             status.error('Could not delete Dataset')
                         }
-                    )  
+                    )
                 }
         }
     }
@@ -85,7 +85,7 @@ angular.module('fifoApp')
 
                 //Datasets imported with previouse fifo (i.e. prev than 20131212T153143Z) does not has the status field, artificially add one.
                 if (!res.status) {
-                    if (res.imported === 1) 
+                    if (res.imported === 1)
                         res.status = 'imported'
                     else
                         res.status = 'pending'
@@ -93,7 +93,7 @@ angular.module('fifoApp')
                 $scope.datasets[id] = res
             })
         })
-                                        
+
         if (!Config.datasets)
             return status.error('Make sure your config has an URL for the remote datasets')
 
@@ -113,102 +113,167 @@ angular.module('fifoApp')
         });
 
     }
-    $scope.show()
+    $scope.show();
 
-    // $scope.uploader = $fileUploader.create({
-    //     url: 'unknown_url',
-    //     // headers: {
-    //         // 'Content-Type': 'application/x-www-form-urlencoded'
-    //     // },
-    //     filters: [
-    //         function(item) {
-    //             return item.type == 'application/json' || item.type == 'application/x-gzip'
-    //         }
-    //     ]
-    // })
-
-    // var uploader = $scope.uploader,
-    var uuid = _uuid()
-
-    uuid = 'cec0e6ff-a1ca-33e5-8d2f-9b3bb4ebf871'
-
-    $scope.onFileSelect = function(files) {
-        var file = files[0]
-
-        //Read the file.
-        var fr = new FileReader();
-
-        fr.onprogress = function(ev) {
-            console.log(100 * ev.loaded / ev.total)
-        }
-        fr.onload = function() {
-            // $scope.manifest = fr.result
-            // $scope.$apply()
-
-            console.log('ONLOAD!!')
-            //Upload
-            // var url = Config.endpoint + 'datasets/' + uuid
-            var url = Config.endpoint + 'datasets/' + uuid + '/datassetss.tar.gz'
-            // url = 'http://localhost:7777' + url
-            var prom = $upload.http({
-                url: url,
-                headers: {
-                    'Content-Type': file.type
-                },
-                data: fr.result
-            })
-
-            prom.then(function(res) {
-                console.log('---> RES', res)
-            }, null, function(evt) {
-                console.log('--> EVT:', evt.loaded, evt.total, parseInt(100.0 * evt.loaded / evt.total))
-            })
-
-        }
-        // fr.readAsText(file)
-        fr.readAsArrayBuffer(file)
-        // fr.readAsBinaryString(file)
-        // readAsDataURL
-        console.log('subiendo esto...', file)
-
+    function _uploadFile1(file, callback) {
+      function Uploader() {
+        var timeToGo = file.size / (10 * 1024* 1024);
+        console.log('will use:', timeToGo);
+        var progress = (1 / timeToGo) * 100;
+        this.stopFlag = false;
+        this.count = function() {
+          var self = this;
+          setTimeout(function() {
+            timeToGo -= 1;
+            if (self.stopFlag) {
+              callback('cancelled');
+              return;
+            }
+            if (timeToGo > 0) {
+              callback('progress', progress);
+              self.count();
+            } else {
+              callback('done');
+            }
+          }, 1000);
+        };
+      }
+      var u = new Uploader();
+      u.count();
     }
 
-        // uploader.bind('afteraddingfile', function (event, item) {
-        //     console.log('After adding file', item.file.type, item)
+    function _uploadFile(file, callback) {
+      var url = '';
+      var method = '';
+      var params = {};
+      console.log(file.type);
+      params.headers = {
+        //'X-Snarl-Token': '8ec5d4ea-0bf4-4168-89ef-58a3063e59ba',
+        'Content-Type': file.type,
+        'Accept': 'application/json'
+      };
+      switch(file.type) {
+        case 'application/json':
+          params.data = JSON.parse(file.readAsText());
+          params.url = Config.endpoint + 'datasets/' + params.data.uuid;
+          params.method = 'POST';
+          break;
+        case 'application/gzip':
+          params.url = Config.endpoint + 'datasets/' + 'd2ba0f30-bbe8-11e2-a9a2-6bc116856d85' + '/dataset.gz';
+          params.headers['Content-Type'] = 'application/x-gzip';
+          params.method = 'PUT';
+          params.file = file;
+          break;
+      };
 
-        //     var mime = item.file.type
-        //     if (mime == 'application/json') 
-        //         item.url = Config.endpoint + 'datasets/' + uuid + '/dataset.tar.gz'
-        //     if (mime == 'application/x-gzip') 
-        //         item.url = Config.endpoint + 'datasets/' + uuid
+      console.log('will execute upload with: ', params);
+      return;
 
+      return $upload.upload(params)
+        .progress(function(evt) {
+          callback('progress', parseInt(100.0 * evt.loaded / evt.total));
+        })
+        .success(function(data, status, headers, config) {
+          callback('done');
+        })
+        .error(function(err) {
+          callback('error');
+        });
+    }
 
-        //     if (mime != 'application/json') return;
+    var uploader = $scope.uploader = {
+      queue: [],
+      isHTML5: true,
+      isUploading: false,
+      continueFlag: true,
+      getNotUploadedItems: function() {
+          var result = [];
+          this.queue.forEach(function(item) {
+              if (!item.isUploaded) {
+                  result.push(item);
+              }
+          });
+          return result;
+      },
+      upload: function(item) {
+        var self = this;
+        this.isUploading = true;
+        item.uploader = _uploadFile(item.file, function(status, progress) {
+          switch (status) {
+            case 'done':
+              item.isSuccess = true;
+              item.inUploading = false;
+              item.progress = 100;
+              if (self.continueFlag) {
+                self.startUpload();
+              }
+              break;
+            case 'cancelled':
+              item.isCancel = true;
+              item.inUploading = false;
+              break;
+            case 'progress':
+              item.progress += progress;
+              if (item.progress > 100) {
+                item.progress = 100;
+              }
+              item.inUploading = true;
+              break;
+          }
+        });
+      },
+      startUpload: function() {
+        var todo = null;
+        for (var i=0; i<this.queue.length; i++) {
+          if (!this.queue[i].isSuccess) {
+            todo = this.queue[i];
+            break;
+          }
+        }
+        if (todo) {
+          this.upload(todo);
+        }
+      },
+      cancel: function(item) {
+        if (item.uploader) {
+          item.uploader.stopFlag = true;
+        }
+      },
+      cancelAll: function() {
+        var self = this;
+        this.continueFlag = false;
+        this.queue.forEach(function(item) {
+          self.cancel(item);
+        });
+      },
+      remove: function(item) {
+        var i = this.queue.indexOf(item);
+        if (i >= 0 && i <= this.queue.length) {
+          if (item.inUploading) {
+            this.cancel(item);
+          }
+          this.queue.splice(i, 1);
+        }
+      },
+      removeAll: function() {
+        var self = this;
+        this.queue.forEach(function(item) {
+          self.remove(item);
+        });
+      }
+    };
 
-        //     var fr = new FileReader();
-        //     fr.onload = function() {
-        //         $scope.manifest = fr.result
-        //         $scope.$apply()
-        //     }
-        //     fr.readAsText(item.file)
-
-        // })
-
-        // uploader.bind('completeall', function (event, items) {
-
-        //     var failed = items.filter(function(i) {
-        //         return !i.isSuccess;
-        //     })
-        //     if (failed.length) {
-        //         status.info('Could not upload the dataset. Please try again.')
-        //     }
-
-        //     $scope.uploader.clearQueue();
-        // });
-
-        // uploader.bind('error', function (event, xhr, item, response) {
-        //     status.error('Could not upload ' + item.file.name + ': ' + (response || xhr.statusText))
-        // });
-
+    $scope.onFileSelect = function(files) {
+      uploader.queue.push({
+        file: files[0],
+        isSuccess: false,
+        isCancel: false,
+        isError: false,
+        inUploading: false,
+        progress: 0,
+        uploader: null
+      })
+      return;
+    };
 
   });
