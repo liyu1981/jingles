@@ -113,7 +113,7 @@
                         <th width="50%">Name</th>
                         <th ng-show="uploader.isHTML5">Size</th>
                         <th ng-show="uploader.isHTML5">Progress</th>
-                        <th>Status</th>
+                        <th style="text-align: center;">Status</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -127,9 +127,9 @@
                             </div>
                         </td>
                         <td class="text-center">
-                            <span ng-show="item.isSuccess"><i class="glyphicon glyphicon-ok"></i></span>
-                            <span ng-show="item.isCancel"><i class="glyphicon glyphicon-ban-circle"></i></span>
-                            <span ng-show="item.isError"><i class="glyphicon glyphicon-remove"></i></span>
+                            <span ng-show="item.isSuccess"><i class="glyphicon glyphicon-ok"></i> Succeeded</span>
+                            <span ng-show="item.isCancel"><i class="glyphicon glyphicon-ban-circle"></i> Cancelled</span>
+                            <span ng-show="item.isError" title="{{ item.errorMsg }}"><i class="glyphicon glyphicon-remove"></i>Failed</span>
                         </td>
                         <td nowrap>
                             <span class="glyphicon glyphicon-trash" title='Remove' jq-run='tooltip' ng-click="uploader.remove(item)"></span>
@@ -141,13 +141,15 @@
             <div>
                 <div class='pull-right'>
                   <button type="button" class="btn btn-default btn-s"
-                    ng-click="uploader.startUpload()" ng-disabled="!uploader.getNotUploadedItems().length">
+                    ng-click="uploader.newRoundUpload()" ng-disabled="!uploader.canStart()">
                       <span class="glyphicon glyphicon-upload"></span> Upload
                   </button>
+                  <!--
                   <button type="button" class="btn btn-default btn-s"
                     ng-click="uploader.cancelAll()" ng-disabled="!uploader.isUploading">
                       <span class="glyphicon glyphicon-ban-circle"></span> Cancel
                   </button>
+                  -->
                   <button type="button" class="btn btn-default btn-s"
                     ng-click="uploader.removeAll()" ng-disabled="!uploader.queue.length">
                       <span class="glyphicon glyphicon-trash"></span> Remove
@@ -155,7 +157,6 @@
                 </div>
             </div>
           </div>
-
 
           </div>
 

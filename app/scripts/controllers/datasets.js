@@ -115,137 +115,260 @@ angular.module('fifoApp')
     }
     $scope.show();
 
-    function _uploadFile1(file, callback) {
-      function Uploader() {
-        var timeToGo = file.size / (10 * 1024* 1024);
-        console.log('will use:', timeToGo);
-        var progress = (1 / timeToGo) * 100;
-        this.stopFlag = false;
-        this.count = function() {
-          var self = this;
-          setTimeout(function() {
-            timeToGo -= 1;
-            if (self.stopFlag) {
-              callback('cancelled');
-              return;
-            }
-            if (timeToGo > 0) {
-              callback('progress', progress);
-              self.count();
-            } else {
-              callback('done');
-            }
-          }, 1000);
-        };
+    /* upload functions */
+
+    function _getFileExt(filename) {
+      var a = filename.split(".");
+      if( a.length === 1 || ( a[0] === "" && a.length === 2 ) ) {
+        return "";
       }
-      var u = new Uploader();
-      u.count();
+      return a.pop();
     }
 
-    function _uploadFile(file, callback) {
+    function _readFileAsText(fileObj, callback) {
+      var r = new FileReader();
+      r.onload = function(e) {
+        var contents = e.target.result;
+        callback(contents);
+      }
+      r.readAsText(fileObj);
+    }
+
+    function _uploadFile(item, uuidfile, callback) {
+      _readFileAsText(uuidfile, function(contents) {
+        var j = JSON.parse(contents);
+        if (j && j.uuid) {
+          switch(item.filetype) {
+            case 'application/json':
+              _uploadFile_manifest(item, j, callback);
+              break;
+            case 'application/x-gzip':
+              _uploadFile_gz(item, j, callback);
+              break;
+          }
+        } else {
+          status.error('Can not read uuid from:' + uuidfile.name);
+          callback('error', 'Can not read uuid from: ' + uuidfile.name);
+        }
+      });
+    }
+
+    function _uploadFile_manifest(item, manifest, callback) {
       var url = '';
       var method = '';
       var params = {};
-      console.log(file.type);
-      params.headers = {
-        //'X-Snarl-Token': '8ec5d4ea-0bf4-4168-89ef-58a3063e59ba',
-        'Content-Type': file.type,
-        'Accept': 'application/json'
-      };
-      switch(file.type) {
-        case 'application/json':
-          params.data = JSON.parse(file.readAsText());
-          params.url = Config.endpoint + 'datasets/' + params.data.uuid;
-          params.method = 'POST';
-          break;
-        case 'application/gzip':
-          params.url = Config.endpoint + 'datasets/' + 'd2ba0f30-bbe8-11e2-a9a2-6bc116856d85' + '/dataset.gz';
-          params.headers['Content-Type'] = 'application/x-gzip';
-          params.method = 'PUT';
-          params.file = file;
-          break;
-      };
-
-      console.log('will execute upload with: ', params);
-      return;
-
-      return $upload.upload(params)
-        .progress(function(evt) {
-          callback('progress', parseInt(100.0 * evt.loaded / evt.total));
-        })
-        .success(function(data, status, headers, config) {
-          callback('done');
-        })
-        .error(function(err) {
-          callback('error');
-        });
+      params.headers = { 'Accept': 'application/json' };
+      params.data = manifest;
+      params.url = Config.endpoint + 'datasets/' + manifest.uuid + '/';
+      params.headers['Content-Type'] = 'application/json;charset=UTF-8';
+      params.method = 'POST';
+      $.getJSON(params.url, function() {})
+       .done(function() {
+         // already have this manifest, so just mark it succeeded
+         callback('done');
+       })
+       .fail(function() {
+         // only upload when there isn't
+         item.uploader = $upload.http(params)
+           .progress(function(evt) {
+             callback('progress', parseInt(100.0 * evt.loaded / evt.total));
+           })
+           .success(function() {
+             callback('done');
+           })
+           .error(function(err) {
+             callback('error');
+           });
+       });
     }
+
+    function _uploadFile_gz(item, manifest, callback) {
+      var url = '';
+      var method = '';
+      var params = {};
+      params.headers = { 'Accept': 'application/json' };
+      params.url = Config.endpoint + 'datasets/' + manifest.uuid + '/dataset.gz';
+      params.headers['Content-Type'] = 'application/x-gzip';
+      params.method = 'PUT';
+      var fileReader = new FileReader();
+      fileReader.readAsArrayBuffer(item.file);
+      fileReader.onload = function(e) {
+        params.data = e.target.result;
+        item.uploader = $upload.http(params)
+          .progress(function(evt) {
+            callback('progress', parseInt(100.0 * evt.loaded / evt.total));
+          })
+          .success(function() {
+            callback('done');
+          })
+          .error(function(err) {
+            callback('error');
+          });
+      };
+    }
+
+    function FileItem(overlay) {
+      this.filetype = '';
+      this.file = null;
+      this.inUploading = false;
+      this.isSuccess =  false;
+      this.isCancel = false;
+      this.isError = false;
+      this.progress = 0;
+      this.errorMsg = '';
+      this.uploader = null;
+      this.roundSkip = false;
+      var self = this;
+      Object.keys(overlay).forEach(function(key) {
+        self[key] = overlay[key];
+      });
+    }
+
+    FileItem.prototype.reset = function() {
+      this.inUploading = false;
+      this.isSuccess =  false;
+      this.isCancel = false;
+      this.isError = false;
+      this.progress = 0;
+      this.errorMsg = '';
+    };
+
+    FileItem.prototype.setError = function(msg) {
+      this.isError = true;
+      this.inUploading = false;
+      this.errorMsg = msg || '';
+    };
+
+    FileItem.prototype.setSuccess = function() {
+      this.isSuccess = true;
+      this.inUploading = false;
+      this.progress = 100;
+    };
+
+    FileItem.prototype.setCancel = function() {
+      this.isCancel = true;
+      this.inUploading = false;
+    };
 
     var uploader = $scope.uploader = {
       queue: [],
       isHTML5: true,
       isUploading: false,
       continueFlag: true,
-      getNotUploadedItems: function() {
-          var result = [];
-          this.queue.forEach(function(item) {
-              if (!item.isUploaded) {
-                  result.push(item);
-              }
-          });
-          return result;
+
+      canStart: function() {
+        if (this.isUploading) {
+          return false;
+        }
+        var foundTodo = false;
+        for (var i=0; i<this.queue.length; i++) {
+          if (!this.queue[i].isSuccess) {
+            foundTodo = true;
+            break;
+          }
+        }
+        return foundTodo;
       },
+
       upload: function(item) {
         var self = this;
-        this.isUploading = true;
-        item.uploader = _uploadFile(item.file, function(status, progress) {
+        item.reset();
+        var uuidfile = item.file;
+        if (item.file.type === 'application/gzip') { // this is dataset.gz case
+          // try to find the corresponding .dsmanifest file
+          var nameToFind = item.file.name.slice(0, -3 /* .gz */) + '.dsmanifest';
+          var found = null;
+          for (var i=0; i<this.queue.length; i++) {
+            if (this.queue[i].file.name === nameToFind) {
+              found = this.queue[i];
+              break;
+            }
+          }
+          if (found) {
+            // recur to upload .dsmanifest before .gz
+            if (!found.isSuccess && !found.roundSkip) {
+              this.upload(found);
+            }
+            uuidfile = found.file;
+          } else {
+            item.setError('Misssing manifest file!');
+            status.error(item.errorMsg + '[' + item.file.name + ']');
+            return;
+          }
+        }
+
+        _uploadFile(item, uuidfile, function(status, data) {
           switch (status) {
             case 'done':
-              item.isSuccess = true;
-              item.inUploading = false;
-              item.progress = 100;
+              item.setSuccess();
               if (self.continueFlag) {
                 self.startUpload();
               }
               break;
             case 'cancelled':
-              item.isCancel = true;
-              item.inUploading = false;
+              item.setCancel();
+              if (self.continueFlag) {
+                self.startUpload();
+              }
               break;
             case 'progress':
-              item.progress += progress;
+              item.progress += data;
               if (item.progress > 100) {
                 item.progress = 100;
               }
               item.inUploading = true;
               break;
+            case 'error':
+              item.setError(data);
+              item.roundSkip = true;
+              if (self.continueFlag) {
+                self.startUpload();
+              }
+              break;
           }
         });
       },
+
+      newRoundUpload: function() {
+        this.queue.forEach(function(item) {
+          item.roundSkip = false;
+        });
+        this.startUpload();
+      },
+
       startUpload: function() {
         var todo = null;
         for (var i=0; i<this.queue.length; i++) {
-          if (!this.queue[i].isSuccess) {
+          if (!this.queue[i].isSuccess && !this.queue[i].roundSkip) {
             todo = this.queue[i];
             break;
           }
         }
         if (todo) {
           this.upload(todo);
+        } else {
+          this.isUploading = false;
         }
       },
+
+      /*
       cancel: function(item) {
+        console.log('will cancel: ', item);
         if (item.uploader) {
           item.uploader.stopFlag = true;
         }
       },
+
       cancelAll: function() {
         var self = this;
         this.continueFlag = false;
         this.queue.forEach(function(item) {
           self.cancel(item);
         });
+        this.isUploading = false;
       },
+      */
+
       remove: function(item) {
         var i = this.queue.indexOf(item);
         if (i >= 0 && i <= this.queue.length) {
@@ -255,6 +378,7 @@ angular.module('fifoApp')
           this.queue.splice(i, 1);
         }
       },
+
       removeAll: function() {
         var self = this;
         this.queue.forEach(function(item) {
@@ -264,15 +388,24 @@ angular.module('fifoApp')
     };
 
     $scope.onFileSelect = function(files) {
-      uploader.queue.push({
-        file: files[0],
-        isSuccess: false,
-        isCancel: false,
-        isError: false,
-        inUploading: false,
-        progress: 0,
-        uploader: null
-      })
+      var filetype = '';
+      var file = files[0];
+      var ext = _getFileExt(file.name);
+      switch(ext) {
+        case 'gz':
+          filetype = 'application/x-gzip';
+          break;
+        case 'dsmanifest':
+          filetype = 'application/json';
+          break;
+        default:
+          status.error('File must be .gz or .dsmanifest file.');
+          return;
+      }
+      uploader.queue.push(new FileItem({
+        filetype: filetype,
+        file: file
+      }));
       return;
     };
 
