@@ -117,6 +117,15 @@ angular.module('fifoApp')
 
     /* upload functions */
 
+    /* Basically the flow is
+
+       1. user select some files with the select btn, it will handled by $scope.onFileSelect,
+          which checks this and that (including file size). If ok, will put files into
+          uploader.queue
+       2. user then click upload btn, which calls uploader.startUpload to find at least one
+          file to upload. After that, if there is more, the iteration continues.
+     */
+
     function _getFileExt(filename) {
       var a = filename.split(".");
       if( a.length === 1 || ( a[0] === "" && a.length === 2 ) ) {
@@ -135,9 +144,13 @@ angular.module('fifoApp')
     }
 
     function _uploadFile(item, uuidfile, callback) {
+      // uuidfile is usually the dsmanifest file, which is a json, check example here
+      //   https://images.joyent.com/images/19daa264-c4c4-11e3-bec3-c30e2c0d4ec0
+      // we read uuidfile for uuid
       _readFileAsText(uuidfile, function(contents) {
         var j = JSON.parse(contents);
         if (j && j.uuid) {
+          // got uuid, now go to upload real stuff
           switch(item.filetype) {
             case 'application/json':
               _uploadFile_manifest(item, j, callback);
@@ -153,6 +166,8 @@ angular.module('fifoApp')
       });
     }
 
+    // func for uploading dsmanifest file, usually called after the content is read & parsed
+    // manifest is the parsed JSON obj
     function _uploadFile_manifest(item, manifest, callback) {
       var url = '';
       var method = '';
@@ -182,6 +197,8 @@ angular.module('fifoApp')
        });
     }
 
+    // func for uploading dataset gz file, usually called after the manifest is read & parsed
+    // manifest is parsed JSON obj
     function _uploadFile_gz(item, manifest, callback) {
       var url = '';
       var method = '';
@@ -190,6 +207,8 @@ angular.module('fifoApp')
       params.url = Config.endpoint + 'datasets/' + manifest.uuid + '/dataset.gz';
       params.headers['Content-Type'] = 'application/x-gzip';
       params.method = 'PUT';
+      // HTML5 FileReader API has to be done in this... urgly style
+      //   check http://www.html5rocks.com/en/tutorials/file/dndfiles/ for a tutorial
       var fileReader = new FileReader();
       fileReader.readAsArrayBuffer(item.file);
       fileReader.onload = function(e) {
@@ -403,6 +422,10 @@ angular.module('fifoApp')
           return;
       }
       // LI, Yu: Currently as I have tested, 250MB is safe to upload in browser.
+      //   Test data got by following cmds
+      //     wget -c https://images.joyent.com/images/19daa264-c4c4-11e3-bec3-c30e2c0d4ec0 -O CentOS-2.6.1.dsmanifest
+      //     wget -c https://images.joyent.com/images/19daa264-c4c4-11e3-bec3-c30e2c0d4ec0/file -O CentOS-2.6.1.gz
+      //   In testing just select these two downloaded files
       if (file.size > 250*1024*1024) {
         status.error('File ' + file.name + ' is too big (>250MB) to be uploaded in browser. Please try to upload it by client API (such as PyFi).');
         return;
