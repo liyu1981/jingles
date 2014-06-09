@@ -402,6 +402,11 @@ angular.module('fifoApp')
           status.error('File must be .gz or .dsmanifest file.');
           return;
       }
+      // LI, Yu: Currently as I have tested, 250MB is safe to upload in browser.
+      if (file.size > 250*1024*1024) {
+        status.error('File ' + file.name + ' is too big (>250MB) to be uploaded in browser. Please try to upload it by client API (such as PyFi).');
+        return;
+      }
       uploader.queue.push(new FileItem({
         filetype: filetype,
         file: file
