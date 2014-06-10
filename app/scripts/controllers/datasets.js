@@ -126,6 +126,12 @@ angular.module('fifoApp')
           file to upload. After that, if there is more, the iteration continues.
      */
 
+    // LI, Yu: Currently as I have tested, 250MB is safe to upload in browser.
+    //   Test data got by following cmds
+    //     wget -c https://images.joyent.com/images/19daa264-c4c4-11e3-bec3-c30e2c0d4ec0 -O CentOS-2.6.1.dsmanifest
+    //     wget -c https://images.joyent.com/images/19daa264-c4c4-11e3-bec3-c30e2c0d4ec0/file -O CentOS-2.6.1.gz
+    //   In testing just select these two downloaded files
+
     function _getFileExt(filename) {
       var a = filename.split(".");
       if( a.length === 1 || ( a[0] === "" && a.length === 2 ) ) {
@@ -186,13 +192,13 @@ angular.module('fifoApp')
          // only upload when there isn't
          item.uploader = $upload.http(params)
            .progress(function(evt) {
-             callback('progress', parseInt(100.0 * evt.loaded / evt.total));
+             callback('progress', (Math.floor(evt.loaded/evt.total*1000)/10));
            })
            .success(function() {
              callback('done');
            })
            .error(function(err) {
-             callback('error');
+             callback('error', err.toString());
            });
        });
     }
@@ -200,30 +206,30 @@ angular.module('fifoApp')
     // func for uploading dataset gz file, usually called after the manifest is read & parsed
     // manifest is parsed JSON obj
     function _uploadFile_gz(item, manifest, callback) {
-      var url = '';
-      var method = '';
-      var params = {};
-      params.headers = { 'Accept': 'application/json' };
-      params.url = Config.endpoint + 'datasets/' + manifest.uuid + '/dataset.gz';
-      params.headers['Content-Type'] = 'application/x-gzip';
-      params.method = 'PUT';
-      // HTML5 FileReader API has to be done in this... urgly style
-      //   check http://www.html5rocks.com/en/tutorials/file/dndfiles/ for a tutorial
-      var fileReader = new FileReader();
-      fileReader.readAsArrayBuffer(item.file);
-      fileReader.onload = function(e) {
-        params.data = e.target.result;
-        item.uploader = $upload.http(params)
-          .progress(function(evt) {
-            callback('progress', parseInt(100.0 * evt.loaded / evt.total));
-          })
-          .success(function() {
-            callback('done');
-          })
-          .error(function(err) {
-            callback('error');
-          });
+      // In this part we will not use the angular-file-upload (which uses
+      // angular's $upload internally) since it can not handle very large file (as we
+      // have to put). We turn to use the XMLHttpRequest Level 2 apis which should be
+      // widely supported in modern browsers.
+      //
+      //   ref: https://dvcs.w3.org/hg/xhr/raw-file/tip/Overview.html
+      //   tutorial: http://www.html5rocks.com/en/tutorials/file/xhr2/
+      //   browser support: http://caniuse.com/xhr2
+      var url = Config.endpoint + 'datasets/' + manifest.uuid + '/dataset.gz';
+      var method = 'PUT';
+      var xhr = new XMLHttpRequest();
+      xhr.open(method, url, true);
+      xhr.setRequestHeader('Accept', 'application/json');
+      xhr.setRequestHeader('Content-Type', 'application/x-gzip');
+      xhr.upload.onprogress = function(evt) {
+        callback('progress', (Math.floor(evt.loaded/evt.total*1000)/10)); // keep 1 decimal point, e.g., 97.4
       };
+      xhr.onload = function() {
+        callback('done');
+      };
+      xhr.onerror = function(err) {
+        callback('error', err.toString());
+      };
+      xhr.send(item.file);
     }
 
     function FileItem(overlay) {
@@ -244,12 +250,16 @@ angular.module('fifoApp')
     }
 
     FileItem.prototype.reset = function() {
-      this.inUploading = false;
+      this.inUploading = true;
       this.isSuccess =  false;
       this.isCancel = false;
       this.isError = false;
       this.progress = 0;
       this.errorMsg = '';
+    };
+
+    FileItem.prototype.isDoneOrFailed = function() {
+      return this.isSuccess || this.isError;
     };
 
     FileItem.prototype.setError = function(msg) {
@@ -271,7 +281,6 @@ angular.module('fifoApp')
 
     var uploader = $scope.uploader = {
       queue: [],
-      isHTML5: true,
       isUploading: false,
       continueFlag: true,
 
@@ -317,25 +326,31 @@ angular.module('fifoApp')
         }
 
         _uploadFile(item, uuidfile, function(status, data) {
+          console.log('callback:', item.name, status, data);
           switch (status) {
             case 'done':
+              item.progress = 100;
               item.setSuccess();
               if (self.continueFlag) {
                 self.startUpload();
               }
               break;
+            /*
             case 'cancelled':
               item.setCancel();
               if (self.continueFlag) {
                 self.startUpload();
               }
               break;
+            */
             case 'progress':
-              item.progress += data;
-              if (item.progress > 100) {
-                item.progress = 100;
+              // for file upload, make its progress max to be 90%, the final 10% will be filled in status 'done'
+              // this will be clearer to user, since the file uploading is not the whole stuff of importing a dataset
+              if (!item.isDoneOrFailed()) {
+                // sometime this progress evt just arrived after done or error, yes this is javascript :)
+                item.progress = data * 0.9;
+                item.inUploading = true;
               }
-              item.inUploading = true;
               break;
             case 'error':
               item.setError(data);
@@ -421,12 +436,7 @@ angular.module('fifoApp')
           status.error('File must be .gz or .dsmanifest file.');
           return;
       }
-      // LI, Yu: Currently as I have tested, 250MB is safe to upload in browser.
-      //   Test data got by following cmds
-      //     wget -c https://images.joyent.com/images/19daa264-c4c4-11e3-bec3-c30e2c0d4ec0 -O CentOS-2.6.1.dsmanifest
-      //     wget -c https://images.joyent.com/images/19daa264-c4c4-11e3-bec3-c30e2c0d4ec0/file -O CentOS-2.6.1.gz
-      //   In testing just select these two downloaded files
-      if (file.size > 250*1024*1024) {
+      if (file.size > 250*1024*1024 /* 250MB */) {
         status.error('File ' + file.name + ' is too big (>250MB) to be uploaded in browser. Please try to upload it by client API (such as PyFi).');
         return;
       }

@@ -100,8 +100,8 @@
             <br/>
 
             <div ng-show='dropSupported' class='container' ng-file-drop-available="dropSupported=true">
-              <div class='col-sm-4 well drop-zone' ng-file-drop='onFileSelect($files)'>Drop a manifest and a zvol files here</div>
-              <div class='col-sm-6' style='margin-top: 20px;'><input ng-file-select='onFileSelect($files)' type="file"/></div>
+              <div class='col-sm-6 well drop-zone' ng-file-drop='onFileSelect($files)'>Drop a manifest(*.dsmanifest) or a zvol file(*.gz) here</div>
+              <div class='col-sm-3' style='margin-top: 20px;'><input ng-file-select='onFileSelect($files)' type="file"/></div>
             </div>
 
             <pre style='white-space: pre-wrap' class='pre-scrollable' ng-if='manifest'>{{manifest}}</pre>
@@ -111,8 +111,8 @@
                 <thead>
                     <tr>
                         <th width="50%">Name</th>
-                        <th ng-show="uploader.isHTML5">Size</th>
-                        <th ng-show="uploader.isHTML5">Progress</th>
+                        <th>Size</th>
+                        <th>Progress</th>
                         <th style="text-align: center;">Status</th>
                         <th></th>
                     </tr>
@@ -120,8 +120,8 @@
                 <tbody>
                     <tr ng-repeat="item in uploader.queue">
                         <td><strong>{{ item.file.name }}</strong></td>
-                        <td ng-show="uploader.isHTML5" nowrap>{{ item.file.size | bytes }}</td>
-                        <td ng-show="uploader.isHTML5">
+                        <td nowrap>{{ item.file.size | bytes }}</td>
+                        <td>
                             <div class="progress" style="margin-bottom: 0;">
                                 <div class="progress-bar" role="progressbar" ng-style="{ 'width': item.progress + '%' }"></div>
                             </div>
