@@ -8209,6 +8209,38 @@ input[type='range'] {
   position: absolute;
 }
 
+#packhierarchy-svg text {
+  font-size: 11px;
+  pointer-events: none;
+}
+
+#packhierarchy-svg text.parent {
+  fill: #1f77b4;
+}
+
+#packhierarchy-svg circle {
+  pointer-events: all;
+  fill: #f7f7f7;
+  stroke: #1d77ef;
+  stroke-width: 2px;
+}
+
+#packhierarchy-svg circle.parent {
+  fill: #1f77b4;
+  fill-opacity: .1;
+  stroke: #5256d6;
+}
+
+#packhierarchy-svg circle.parent:hover {
+  stroke: #ff9500;
+  stroke-width: 3px;
+}
+
+#packhierarchy-svg circle.child:hover {
+  stroke: #ff9500;
+  stroke-width: 3px;
+}
+
 .hide {
   display: none !important;
 }

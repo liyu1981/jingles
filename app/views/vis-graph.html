@@ -3,14 +3,14 @@
     <div class="span12">
       <div class="tabbable tabs-top">
         <ul class="nav nav-tabs">
-          <li class="active"><a href="#forcegraph" data-toggle="tab" translate>ForceGraph</a></li>
-          <li><a href="#packhierarchy" data-toggle="tab" translate>PackHierarchy</a></li>
+          <li><a href="#forcegraph" data-toggle="tab" translate>ForceGraph</a></li>
+          <li class="active"><a href="#packhierarchy" data-toggle="tab" translate>PackHierarchy</a></li>
         </ul>
         <div class="tab-content">
-          <div class="tab-pane active" id="forcegraph">
+          <div class="tab-pane" id="forcegraph">
 
 <!-- force graph begin -->
-<div id="container" class="forcegraph-container">
+<div id="forcegraph-container" class="forcegraph-container" ng-scope ng-controller="VGForceGraphCtrl">
   <div class="forcegraph-control-panel">
     <button class="btn btn-default btn-sm pull-right" ng-click='reset()' translate>Reset</button>
     <button class="btn btn-default btn-sm pull-right" id='fullscreen'  translate>Full Screen</button>
@@ -43,12 +43,15 @@
     </table>
   </div>
 </div>
+
 <!--force graph end-->
 
           </div>
-          <div class="tab-pane" id="packhierarchy">
+          <div class="tab-pane active" id="packhierarchy">
 
 <!--pack hierarchy begin-->
+<div id="packhierarchy-container" class="packhierarchy-container" ng-scope ng-controller="VGPackGraphCtrl">
+</div>
 <!--pack hierarchy end-->
 
           </div>
@@ -57,6 +60,9 @@
     </div>
   </div>
 </div>
+
+<!--popover begin-->
+<div id="VgdlgContainer" ng-scope name="vgdlg">
 
 <div id='popover_vm' class="popover right forcegraph-popover"
   style="display: {{vm && 'block' || 'none'}};">
@@ -101,3 +107,6 @@
     </div>
   </div>
 </div>
+
+</div>
+<!--popover end-->
