@@ -8193,6 +8193,22 @@ input[type='range'] {
   margin: 0;
 }
 
+.forcegraph-container {
+  position: relative;
+}
+
+.forcegraph-control-panel {
+  position: absolute;
+  right: 0;
+  padding: 8px;
+  border: 1px solid #cccccc;
+  border-radius: 4px;
+}
+
+.forcegraph-popover {
+  position: absolute;
+}
+
 .hide {
   display: none !important;
 }
@@ -8335,8 +8351,7 @@ body {
 }
 
 html,
-body,
-.container {
+body {
   height: 100%;
 }
 

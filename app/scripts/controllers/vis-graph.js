@@ -9,7 +9,7 @@ angular.module('fifoApp')
       $scope.$digest()
 
       canvas.attr("transform",
-        " translate(" + d3.event.translate + ")" + 
+        " translate(" + d3.event.translate + ")" +
         " scale("     + d3.event.scale + ")");
 
     }
@@ -51,6 +51,7 @@ angular.module('fifoApp')
 
         var canvas = d3.select(parentEl)
             .append('svg')
+              .attr('id', 'forcegraph-svg')
               .attr('width',   opts.w)
               .attr('height',  opts.h)
               //.attr('viewBox', '0 0 1024 768')
@@ -67,21 +68,27 @@ angular.module('fifoApp')
     /* Build the VM nodes */
     var buildVms = function() {
 
+        var svgoff = $('#forcegraph-svg').offset();
+        var extraLeftOffset = 10; // some extra left offset to make the popover more neat
+        function _calcLeft(x) { return svgoff.left + extraLeftOffset + x; }
+        function _calcTop(y) { return svgoff.top/2 + y; }
+
         $scope.vmsNodes = ($scope.vmsNodes || canvas.selectAll('g.vm'))
             .data(d3.values($scope.vmsHash), function key (d) { return d.uuid })
 
         var newVmsNodes = $scope.vmsNodes.enter()
             .append('g')
                 .attr('class', 'vm')
-                .attr('opacity', function(d) { 
+                .attr('opacity', function(d) {
                     return d.state == 'running'? 1: 0.3
                 })
                 .call(forceLayout.drag)
                 .on('mouseover', function(h) {
                   $scope.vm = h
                   $scope.$digest()
-                  angular.element('#popover_vm').css('left', (210 + h.x) + 'px')
-                  angular.element('#popover_vm').css('top', (-30 + h.y) + 'px')
+                  console.log('mover:', h.x, h.y);
+                  angular.element('#popover_vm').css('left', _calcLeft(h.x) + 'px')
+                  angular.element('#popover_vm').css('top', _calcTop(h.y) + 'px')
                 })
                 .on('mouseout', function() {
                   $scope.vm = undefined
@@ -124,8 +131,14 @@ angular.module('fifoApp')
 
     var hyperMemThredhold = Config.could_test.filter(function(d) { if (d.element=='memory') return d; }).pop().max
     var hyperMemoryColor = function(perc) { return perc > hyperMemThredhold? 'red': 'rgb(255, 178, 39)'; }
+
     /* Build the Hypervisor nodes */
     var buildHypers = function() {
+        var svgoff = $('#forcegraph-svg').offset();
+        var extraLeftOffset = 20; // some extra left offset to make the popover more neat
+        function _calcLeft(x) { return svgoff.left + extraLeftOffset + x; }
+        function _calcTop(y) { return svgoff.top/2 + y; }
+
         $scope.hypersNodes = ($scope.hypersNodes || canvas.selectAll('g.hyper'))
             .data(d3.values($scope.hypersHash), function key(d) { return d.alias })
 
@@ -136,8 +149,8 @@ angular.module('fifoApp')
                 .on('mouseover', function(h) {
                   $scope.hyper = h
                   $scope.$digest()
-                  angular.element('#popover_hyper').css('left', (210 + h.x) + 'px')
-                  angular.element('#popover_hyper').css('top', (-30 + h.y) + 'px')
+                  angular.element('#popover_hyper').css('left', _calcLeft(h.x) + 'px')
+                  angular.element('#popover_hyper').css('top', _calcTop(h.y) + 'px')
                 })
                 .on('mouseout', function() {
                   $scope.hyper = undefined
@@ -149,7 +162,7 @@ angular.module('fifoApp')
                 })
 
         /* This is an experiment, should be handled more elegantly! */
-         
+
         var min = d3.min(d3.values($scope.hypersHash), function(d) {return d.resources['total-memory']})
         var max = d3.max(d3.values($scope.hypersHash), function(d) {return d.resources['total-memory']})
         if (min == max) min = 8000
@@ -161,7 +174,7 @@ angular.module('fifoApp')
             .attr({
                 width: function(d) {return hyperScale(d.resources['total-memory'])},
                 height: function(d) {return hyperScale(d.resources['total-memory'])},
-                transform: function(d, i) { 
+                transform: function(d, i) {
                     var middle = hyperScale(d.resources['total-memory']) / 2
                     return 'translate('+-middle+','+-middle+')'
                 }
@@ -209,7 +222,7 @@ angular.module('fifoApp')
 
                         if (typeof opts.progress == 'number')
                             return opts.progress * opts.width
-                        
+
                         var val = opts.progress(d)
                         return val * opts.width
                     },
@@ -345,7 +358,7 @@ angular.module('fifoApp')
 
           setupForceLayout()
       }
-        
+
     }
 
     /* Charge each particle in the force layout */
@@ -410,7 +423,7 @@ angular.module('fifoApp')
         var changedVm = d.message.data
         changedVm.uuid = d.channel
 
-        /* D3 replace the orig object when changing it in second .data call: 
+        /* D3 replace the orig object when changing it in second .data call:
             https://github.com/mbostock/d3/blob/master/src/selection/data.js#L52
            So, get the old one, merge the new ones there, and throw that one to d3!
            (to not loose x, y, and other data of the node).
@@ -542,8 +555,7 @@ angular.module('fifoApp')
                 .style('stroke-width', 5)
                 .remove()
 
-        sel.transition()
-            .delay(1000)
+        sel.transition() .delay(1000)
             .remove()
 
     }
@@ -566,6 +578,21 @@ angular.module('fifoApp')
     var linkDistance = function(link) {
         return link.target.config ? $scope.distanceValue : 150
     }
+
+    // setup the container's parent's height first
+    // just as simple as taking heights of everything already there out
+    // due the ng-include, the height of $('.header-include').height() can not
+    // be got at thist time (as it is loaded async). however, we know it will
+    // be 52px, so temporaly use the magic number 52 first
+    $('#container').css({
+      //height: '800px'
+      height: ($('body').height()
+                 - $('#visgraphs .tabs-top').height()
+                 - parseInt($('#visgraphs .tab-content').css('padding-top'))
+                 - parseInt($('#visgraphs .tab-content').css('padding-bottom'))
+                 - parseInt($('#visgraphs .tab-content').css('margin-bottom'))
+                 - 52) + 'px'
+    })
 
     var canvas = setup('#container', {w: $('#container').width(), h: $('#container').height()}),
       forceLayout = d3.layout.force()
@@ -593,12 +620,12 @@ angular.module('fifoApp')
         .start()
     }
     $(window).resize(resizeForceLayout)
-    
+
 
     $scope.hypersHash = {}
     $scope.vmsHash = {} //Search vms based on uuid.
     $scope.linksHash = {}
-    
+
     $scope.$on('user_login', getData)
     if (auth.isLogged()) getData()
 
@@ -684,7 +711,7 @@ angular.module('fifoApp')
           }
 
           var inFullScreen = document.fullscreenElement || document.mozFullScreenElement || document.webkitFullscreenElement;
-          
+
           if (inFullScreen)
             cancelFull()
           else

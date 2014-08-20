@@ -1,41 +1,65 @@
+<div class="tab-pane" id="visgraphs">
+  <div class="row-fluid">
+    <div class="span12">
+      <div class="tabbable tabs-top">
+        <ul class="nav nav-tabs">
+          <li class="active"><a href="#forcegraph" data-toggle="tab" translate>ForceGraph</a></li>
+          <li><a href="#packhierarchy" data-toggle="tab" translate>PackHierarchy</a></li>
+        </ul>
+        <div class="tab-content">
+          <div class="tab-pane active" id="forcegraph">
 
-<div id="container" style='height: 100%;'>
-  <div style='position: absolute; right: 40px'>
+<!-- force graph begin -->
+<div id="container" class="forcegraph-container">
+  <div class="forcegraph-control-panel">
     <button class="btn btn-default btn-sm pull-right" ng-click='reset()' translate>Reset</button>
     <button class="btn btn-default btn-sm pull-right" id='fullscreen'  translate>Full Screen</button>
     <br/>
     <table>
       <tr>
         <td translate>Zoom</td>
-        <td><input type='range' id='zoomBar' 
-          ng-model='zoomValue' 
+        <td><input type='range' id='zoomBar'
+          ng-model='zoomValue'
           max='1.5' min='0.1' step='0.01'></td>
       </tr>
       <tr>
         <td translate>Distance</td>
         <td><input type='range'
-          ng-model='distanceValue' 
+          ng-model='distanceValue'
           max='300' min='30'></td>
       </tr>
       <tr>
         <td translate>Charge</td>
         <td><input type='range'
-          ng-model='chargeValue' 
+          ng-model='chargeValue'
           max='1' min='0.05' step='0.01'></td>
       </tr>
       <tr>
         <td>Elasticity</td>
         <td><input type='range'
-          ng-model='elasticityValue' 
+          ng-model='elasticityValue'
           max='1' min='0' step='0.1'></td>
       </tr>
     </table>
   </div>
-  
+</div>
+<!--force graph end-->
+
+          </div>
+          <div class="tab-pane" id="packhierarchy">
+
+<!--pack hierarchy begin-->
+<!--pack hierarchy end-->
+
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>
 
-<div id='popover_vm' class="popover right" 
-  style="display: {{vm && 'block' || 'none'}}; position: absolute;">
+<div id='popover_vm' class="popover right forcegraph-popover"
+  style="display: {{vm && 'block' || 'none'}};">
   <div class="arrow"></div>
   <div class="popover-inner">
     <h3 class="popover-title">
@@ -54,8 +78,8 @@
   </div>
 </div>
 
-<div id='popover_hyper' class="popover right" 
-  style="display: {{hyper && 'block' || 'none'}}; position: absolute;">
+<div id='popover_hyper' class="popover right forcegraph-popover"
+  style="display: {{hyper && 'block' || 'none'}};">
   <div class="arrow"></div>
   <div class="popover-inner">
     <h3 class="popover-title">
@@ -68,7 +92,7 @@
         <dt>Memory</dt><dd>{{hyper.resources['free-memory'] | Mbytes }} free of {{hyper.resources['total-memory'] | Mbytes }}</dd>
         <dt>L1 Arc</dt><dd>{{(hyper.resources["l1hits"]*100/(hyper.resources["l1hits"] + hyper.resources["l1miss"])).toFixed(2)}}%</dd>
         <dt ng-show='hyper.resources["l2hits"]'>L2 Arc</dt><dd ng-show='hyper.resources["l2hits"]'>{{(hyper.resources["l2hits"]*100/(hyper.resources["l1hits"] + hyper.resources["l2miss"])).toFixed(2) | orDefault:'-'}}%</dd>
-        
+
         <div ng-repeat='(name, data) in hyper.pools'>
           <dt>{{name}} pool</dt><dd>{{data.free | Mbytes}} free of {{data.size | Mbytes}}</dd>
         </div>
