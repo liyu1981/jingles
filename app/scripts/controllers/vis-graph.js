@@ -1,17 +1,107 @@
 'use strict';
 
 angular.module('fifoApp')
-  .controller('VisGraphCtrl', function ($scope, wiggle, auth, $filter, status) {
+  .controller('VisGraphCtrl', function ($scope) {});
 
-    var redraw = function() {
+angular.module('fifoApp')
+  .factory('VGCommon', function() {
+    function setupVGContainer(selector) {
+      // setup the container's parent's height first
+      // just as simple as taking heights of everything already there out
+      // due the ng-include, the height of $('.header-include').height() can not
+      // be got at thist time (as it is loaded async). however, we know it will
+      // be 52px, so temporaly use the magic number 52 first
+      $(selector).css({
+        height: Math.max(($('body').height()
+                          - $('#visgraphs .tabs-top').height()
+                          - parseInt($('#visgraphs .tab-content').css('padding-top'))
+                          - parseInt($('#visgraphs .tab-content').css('padding-bottom'))
+                          - parseInt($('#visgraphs .tab-content').css('margin-bottom'))
+                          - 52),
+                          $('#visgraphs .tab-content').width() * 0.8)
+                  + 'px'
+      });
+    }
+
+    function setupVGTabSwitchHandler(targetHref, fn) {
+       $('a[data-toggle="tab"]').on('shown.bs.tab', function (e) {
+         if ($(e.target).attr('href') === targetHref) { fn(e); }
+       })
+    }
+
+    var $dlgScope = angular.element('#VgdlgContainer').scope();
+    $dlgScope.hideAllDlg = function() {
+      this.vm = undefined;
+      this.hyper = undefined;
+      this.$digest();
+    };
+
+    function setupFullscreenButton(containerId) {
+      var fullScreenBehaviour = function(cid) {
+        document.getElementById('fullscreen').onclick = function() {
+          /* Bloody prefixes.. */
+          var goFull = function(el) {
+            if(el.requestFullScreen) {
+              el.requestFullScreen();
+            } else if(el.mozRequestFullScreen) {
+              el.mozRequestFullScreen();
+            } else if(el.webkitRequestFullScreen) {
+              el.webkitRequestFullScreen();
+            }
+          }
+          var cancelFull = function() {
+            if(document.cancelFullScreen) {
+              document.cancelFullScreen();
+            } else if(document.mozCancelFullScreen) {
+              document.mozCancelFullScreen();
+            } else if(document.webkitCancelFullScreen) {
+              document.webkitCancelFullScreen();
+            }
+          }
+          var inFullScreen = document.fullscreenElement || document.mozFullScreenElement || document.webkitFullscreenElement;
+          if (inFullScreen) {
+            cancelFull();
+          } else {
+            goFull(document.getElementById(cid));
+          }
+        }
+      };
+      setTimeout(function() {
+        var cid = containerId;
+        fullScreenBehaviour(cid);
+      }, 0);
+    }
+
+    var calcSvgElBoundingBox = (function() {
+      var svgTopFix = -62; // because of the latering loading <ng header-include>
+      return function(svgEl) {
+        var rect = _.clone(svgEl.getBoundingClientRect());
+        rect.top = rect.top + svgTopFix;
+        rect.bottom = rect.bottom + svgTopFix;
+        return rect;
+      }
+    })();
+
+    return {
+      setupVGContainer: setupVGContainer,
+      setupVGTabSwitchHandler: setupVGTabSwitchHandler,
+      setupFullscreenButton: setupFullscreenButton,
+      calcSvgElBoundingBox: calcSvgElBoundingBox,
+
+      $dlgScope: $dlgScope
+    };
+  });
+
+angular.module('fifoApp')
+  .controller('VGForceGraphCtrl', function ($scope, wiggle, auth, $filter, status, VGCommon) {
+
+    var redraw = function(opts) {
       //zoom is taking precedence over drag event. http://bl.ocks.org/mbostock/6123708
-      $scope.zoomValue = d3.event.scale
-      $scope.$digest()
-
-      canvas.attr("transform",
-        " translate(" + d3.event.translate + ")" +
-        " scale("     + d3.event.scale + ")");
-
+      $scope.zoomValue = (d3.event && d3.event.scale) || 1;
+      $scope.$digest();
+      var t = ((d3.event && d3.event.translate) || opts.translate || 0);
+      var s = ((d3.event && d3.event.scale) || 1);
+      canvas.attr('transform', 'translate(' + t + ')' + ' scale(' + s + ')');
     }
 
     $scope.$watch('zoomValue', function(val) {
@@ -51,7 +141,7 @@ angular.module('fifoApp')
 
         var canvas = d3.select(parentEl)
             .append('svg')
-              .attr('id', 'forcegraph-svg')
+              .attr('id', opts.id || 'forcegraph-svg')
               .attr('width',   opts.w)
               .attr('height',  opts.h)
               //.attr('viewBox', '0 0 1024 768')
@@ -60,19 +150,13 @@ angular.module('fifoApp')
             .append('g')
                 .attr("transform", "translate(" + opts.margin.w + "," + opts.margin.h + ")")
 
-        document.canvas = canvas;
+        // TOFIX: (liyu) seems that this is never used?
+        //document.canvas = canvas;
         return canvas;
-
     }
 
     /* Build the VM nodes */
     var buildVms = function() {
-
-        var svgoff = $('#forcegraph-svg').offset();
-        var extraLeftOffset = 10; // some extra left offset to make the popover more neat
-        function _calcLeft(x) { return svgoff.left + extraLeftOffset + x; }
-        function _calcTop(y) { return svgoff.top/2 + y; }
-
         $scope.vmsNodes = ($scope.vmsNodes || canvas.selectAll('g.vm'))
             .data(d3.values($scope.vmsHash), function key (d) { return d.uuid })
 
@@ -84,15 +168,15 @@ angular.module('fifoApp')
                 })
                 .call(forceLayout.drag)
                 .on('mouseover', function(h) {
-                  $scope.vm = h
-                  $scope.$digest()
-                  console.log('mover:', h.x, h.y);
-                  angular.element('#popover_vm').css('left', _calcLeft(h.x) + 'px')
-                  angular.element('#popover_vm').css('top', _calcTop(h.y) + 'px')
+                  VGCommon.$dlgScope.vm = h
+                  VGCommon.$dlgScope.$digest()
+                  var rect = VGCommon.calcSvgElBoundingBox(this);
+                  angular.element('#popover_vm').css('left', rect.right + 'px')
+                  angular.element('#popover_vm').css('top', rect.top + 'px')
                 })
                 .on('mouseout', function() {
-                  $scope.vm = undefined
-                  $scope.$digest()
+                  VGCommon.$dlgScope.vm = undefined
+                  VGCommon.$dlgScope.$digest()
                 })
                 .on('click', function(d) {
                   if (d3.event.defaultPrevented) return;
@@ -134,51 +218,43 @@ angular.module('fifoApp')
 
     /* Build the Hypervisor nodes */
     var buildHypers = function() {
-        var svgoff = $('#forcegraph-svg').offset();
-        var extraLeftOffset = 20; // some extra left offset to make the popover more neat
-        function _calcLeft(x) { return svgoff.left + extraLeftOffset + x; }
-        function _calcTop(y) { return svgoff.top/2 + y; }
-
         $scope.hypersNodes = ($scope.hypersNodes || canvas.selectAll('g.hyper'))
             .data(d3.values($scope.hypersHash), function key(d) { return d.alias })
 
-        var newHypersNode = $scope.hypersNodes.enter()
-            .append('g')
-                .attr('class', 'hyper')
-                .call(forceLayout.drag)
-                .on('mouseover', function(h) {
-                  $scope.hyper = h
-                  $scope.$digest()
-                  angular.element('#popover_hyper').css('left', _calcLeft(h.x) + 'px')
-                  angular.element('#popover_hyper').css('top', _calcTop(h.y) + 'px')
-                })
-                .on('mouseout', function() {
-                  $scope.hyper = undefined
-                  $scope.$digest()
-                })
-                .on('click', function(d) {
-                  if (d3.event.defaultPrevented) return;
-                  window.open('#/servers/' + d.uuid, '_blank')
-                })
+            var newHypersNode = $scope.hypersNodes.enter().append('g')
+              .attr('class', 'hyper')
+              .call(forceLayout.drag)
+              .on('mouseover', function(h) {
+                VGCommon.$dlgScope.hyper = h
+                VGCommon.$dlgScope.$digest()
+                var rect = VGCommon.calcSvgElBoundingBox(this);
+                angular.element('#popover_hyper').css('left', rect.right + 'px')
+                angular.element('#popover_hyper').css('top', rect.top + 'px')
+              })
+              .on('mouseout', function() {
+                VGCommon.$dlgScope.hyper = undefined
+                VGCommon.$dlgScope.$digest()
+              })
+              .on('click', function(d) {
+                if (d3.event.defaultPrevented) return;
+                window.open('#/servers/' + d.uuid, '_blank')
+              })
 
         /* This is an experiment, should be handled more elegantly! */
-
         var min = d3.min(d3.values($scope.hypersHash), function(d) {return d.resources['total-memory']})
         var max = d3.max(d3.values($scope.hypersHash), function(d) {return d.resources['total-memory']})
         if (min == max) min = 8000
-        var hyperScale = d3.scale.sqrt()
-            .domain([min, max])
-            .range([25, 60])
+        var hyperScale = d3.scale.sqrt().domain([min, max]).range([25, 60])
         newHypersNode.append('image')
-            .attr('xlink:href', 'images/server.png')
-            .attr({
-                width: function(d) {return hyperScale(d.resources['total-memory'])},
-                height: function(d) {return hyperScale(d.resources['total-memory'])},
-                transform: function(d, i) {
-                    var middle = hyperScale(d.resources['total-memory']) / 2
-                    return 'translate('+-middle+','+-middle+')'
-                }
-            })
+          .attr('xlink:href', 'images/server.png')
+          .attr({
+              width: function(d) {return hyperScale(d.resources['total-memory'])},
+              height: function(d) {return hyperScale(d.resources['total-memory'])},
+              transform: function(d, i) {
+                  var middle = hyperScale(d.resources['total-memory']) / 2
+                  return 'translate('+-middle+','+-middle+')'
+              }
+          })
 
         //Testing the concept :P
         var progressSize = hyperSize * 3/4
@@ -579,48 +655,42 @@ angular.module('fifoApp')
         return link.target.config ? $scope.distanceValue : 150
     }
 
-    // setup the container's parent's height first
-    // just as simple as taking heights of everything already there out
-    // due the ng-include, the height of $('.header-include').height() can not
-    // be got at thist time (as it is loaded async). however, we know it will
-    // be 52px, so temporaly use the magic number 52 first
-    $('#container').css({
-      //height: '800px'
-      height: ($('body').height()
-                 - $('#visgraphs .tabs-top').height()
-                 - parseInt($('#visgraphs .tab-content').css('padding-top'))
-                 - parseInt($('#visgraphs .tab-content').css('padding-bottom'))
-                 - parseInt($('#visgraphs .tab-content').css('margin-bottom'))
-                 - 52) + 'px'
-    })
+    // main stuff starts here
 
-    var canvas = setup('#container', {w: $('#container').width(), h: $('#container').height()}),
-      forceLayout = d3.layout.force()
-        //.charge(-220)
-        .charge(layoutParticlesCharge)
-        .linkDistance(linkDistance)
-        .linkStrength(0.85)
-        .on('tick', function() {
+    var svgTranslateX = 0; // global svg x axis translate
 
-            if (!$scope.vmsNodes) return;
+    VGCommon.setupVGContainer('.forcegraph-container');
 
-            $scope.vmsNodes.attr('transform', function(d, i) { return "translate(" + (d.x) + "," + (d.y) + ")" })
-            $scope.hypersNodes.attr('transform', function(d, i) { return "translate(" + (d.x) + "," + (d.y) + ")" })
-
-            $scope.links.attr("x1", function(d) { return d.source.x; })
-                .attr("y1", function(d) { return d.source.y; })
-                .attr("x2", function(d) { return d.target.x; })
-                .attr("y2", function(d) { return d.target.y; });
-
-        })
+    var canvas = setup('#forcegraph-container', {w: $('#forcegraph-container').width(), h: $('#forcegraph-container').height()}),
+        forceLayout = d3.layout.force()
+          //.charge(-220)
+          .charge(layoutParticlesCharge)
+          .linkDistance(linkDistance)
+          .linkStrength(0.85)
+          .on('tick', function() {
+              if (!$scope.vmsNodes) return;
+              $scope.vmsNodes.attr('transform', function(d, i) { return "translate(" + (d.x) + "," + (d.y) + ")" })
+              $scope.hypersNodes.attr('transform', function(d, i) { return "translate(" + (d.x) + "," + (d.y) + ")" })
+              $scope.links.attr("x1", function(d) { return d.source.x; })
+                  .attr("y1", function(d) { return d.source.y; })
+                  .attr("x2", function(d) { return d.target.x; })
+                  .attr("y2", function(d) { return d.target.y; });
+          })
 
     var resizeForceLayout = function() {
       forceLayout && forceLayout
-        .size([$('svg').width(), $('svg').height()])
+        .size([$('#forcegraph-svg').width(), $('#forcegraph-svg').height()])
         .start()
     }
     $(window).resize(resizeForceLayout)
 
+    VGCommon.setupVGTabSwitchHandler('#forcegraph', function(e) {
+      var w = $('#forcegraph-container').width();
+      $('#forcegraph-svg').attr('width', w);
+      svgTranslateX = w/2;
+      // recenter the svg
+      redraw({ translate: '' + w/2 + ',0' });
+    });
 
     $scope.hypersHash = {}
     $scope.vmsHash = {} //Search vms based on uuid.
@@ -682,43 +752,233 @@ angular.module('fifoApp')
     });
     */
 
+    VGCommon.setupFullscreenButton('forcegraph-container');
+  });
 
+angular.module('fifoApp')
+  .controller('VGPackGraphCtrl', function ($scope, wiggle, auth, $filter, status, VGCommon) {
 
-    var fullScreenBehaviour = function() {
+    var logoSize = 30;
+    var byteFormater = $filter('Mbytes');
 
-
-        document.getElementById('fullscreen').onclick = function() {
-
-          /* Bloody prefixes.. */
-          var goFull = function(el) {
-            if(el.requestFullScreen) {
-              el.requestFullScreen();
-            } else if(el.mozRequestFullScreen) {
-              el.mozRequestFullScreen();
-            } else if(el.webkitRequestFullScreen) {
-              el.webkitRequestFullScreen();
-            }
-          }
-
-          var cancelFull = function() {
-            if(document.cancelFullScreen) {
-              document.cancelFullScreen();
-            } else if(document.mozCancelFullScreen) {
-              document.mozCancelFullScreen();
-            } else if(document.webkitCancelFullScreen) {
-              document.webkitCancelFullScreen();
-            }
-          }
-
-          var inFullScreen = document.fullscreenElement || document.mozFullScreenElement || document.webkitFullscreenElement;
-
-          if (inFullScreen)
-            cancelFull()
-          else
-            goFull(document.getElementById('container'))
-        }
+    /* Setup canvas */
+    var setup = function(parentEl, opts) {
+      opts = opts || {w: '100%', h: '100%'};
+      opts.margin = opts.margin || {};
+      opts.margin.w = opts.margin.w || 0;
+      opts.margin.h = opts.margin.w || 0;
+      var canvas = d3.select(parentEl)
+        .append('svg')
+        .attr('id', opts.id || 'packhierarchy-svg')
+        .attr('width',   opts.w)
+        .attr('height',  opts.h)
+        .append('g')
+        .attr('transform', 'translate(' + opts.margin.w + ',' + opts.margin.h + ')');
+      return canvas;
     }
 
-    setTimeout(fullScreenBehaviour, 0)
+    /* Setup the force layout and build */
+    function setupLayout() {
+      if (!svgTranslateX) {
+        svgTranslateX = $('#packhierarchy-container').width()/2 - r/2;
+      }
+      canvas.attr('transform', 'translate(' + svgTranslateX + ',0)');
+    }
 
+    function loadNodes(data) {
+      node = root = data;
+      var nodes = layout.nodes(root);
+
+      var svgoff = $('#packhierarchy-svg').offset();
+      var extraLeftOffset = 5; // some extra left offset to make the popover more neat
+      var extraTopOffset = -64; // this magic number is because of 'header-include'
+      function _calcLeft(x, r) { return svgoff.left + svgTranslateX + extraLeftOffset + x + r; }
+      function _calcTop(y, r) { return svgoff.top + extraTopOffset + y; }
+
+      var g = canvas.selectAll('g.node')
+          .data(nodes)
+        .enter().append('svg:g');
+
+      g.append('svg:circle')
+        .attr('class', function(d) { return d.children ? 'parent' : 'child'; })
+        .attr('cx', function(d) { return d.x; })
+        .attr('cy', function(d) { return d.y; })
+        .attr('r', function(d) { return d.r; })
+        .on('click', function(d) { return zoom(node == d ? root : d); })
+        .on('mouseover', function(d) {
+          if (d.name in hypervisorHash) {
+            VGCommon.$dlgScope.hyper = hypervisorHash[d.name];
+            VGCommon.$dlgScope.$digest();
+            angular.element('#popover_hyper').css('left', _calcLeft(x(d.x), k * d.r) + 'px');
+            angular.element('#popover_hyper').css('top', _calcTop(y(d.y), k * d.r) + 'px');
+          } else if (d.name in vmHash) {
+            VGCommon.$dlgScope.vm = vmHash[d.name];
+            VGCommon.$dlgScope.$digest();
+            angular.element('#popover_vm').css('left', _calcLeft(x(d.x), k * d.r) + 'px');
+            angular.element('#popover_vm').css('top', _calcTop(y(d.y), k * d.r) + 'px');
+          }
+        })
+        .on('mouseout', function() {
+          VGCommon.$dlgScope.hideAllDlg();
+        })
+        .on('click', function(d) {
+          zoom(d.parent, d);
+          //if (d3.event.defaultPrevented) return;
+          //window.open('#/machines/' + d.uuid, '_blank')
+        });
+
+      g.append('svg:image')
+        .attr('class', 'oslogo')
+        .attr('xlink:href', function(d) {
+          if (d.name === 'fifo' || d.name in hypervisorHash) {
+            // this is hypervisor or root, skip
+            return;
+          } else {
+            var vm = vmHash[d.name];
+            return 'images/logos/' + (vm.config._dataset && vm.config._dataset.os || 'unknown') + '.png';
+          }
+        })
+        .attr('width', logoSize)
+        .attr('height', logoSize)
+        .attr('x', function(d) { return d.x - logoSize/2; })
+        .attr('y', function(d) { return d.y - logoSize/2; });
+
+      g.append('svg:text')
+        .attr('class', function(d) { return d.children ? 'parent' : 'child'; })
+        .attr('x', function(d) { return d.x; })
+        .attr('y', function(d) { return logoSize/2 + 2 + d.y; })
+        .attr('dy', '.35em')
+        .attr('text-anchor', 'middle')
+        .style('opacity', function(d) { return d.r > 20 ? 1 : 0; })
+        .text(function(d) {
+          if (d.name === 'fifo') {
+            return 'All your data belongs to Licenser, not me!';
+          } else if (d.name in hypervisorHash) {
+            return hypervisorHash[d.name].alias;
+          } else if (d.name in vmHash) {
+            var t = (vmHash[d.name].config.alias || '');
+            return t + ((t === '') ? '' : ',') + byteFormater(vmHash[d.name].config.ram);
+          }
+        });
+    }
+
+    function zoom(d, i) {
+      k = r / d.r / 2;
+      x.domain([d.x - d.r, d.x + d.r]);
+      y.domain([d.y - d.r, d.y + d.r]);
+
+      var t = canvas.transition().duration(d3.event.altKey ? 7500 : 750);
+
+      t.selectAll('circle')
+          .attr('cx', function(d) { return x(d.x); })
+          .attr('cy', function(d) { return y(d.y); })
+          .attr('r', function(d) { return k * d.r; });
+
+      t.selectAll('text')
+          .attr('x', function(d) { return x(d.x); })
+          .attr('y', function(d) { return k * (logoSize/2 + 2) + y(d.y); })
+          .style('opacity', function(d) { return k * d.r > 20 ? 1 : 0; });
+
+      t.selectAll('image')
+        .attr('x', function(d) { return x(d.x) - (k * logoSize)/2; })
+        .attr('y', function(d) { return y(d.y) - (k * logoSize)/2; })
+        .attr('width', function(d) { return k * logoSize; })
+        .attr('height', function(d) { return k * logoSize; });
+
+      node = d;
+
+      // and remember to clear all dlgs
+      VGCommon.$dlgScope.hideAllDlg();
+
+      d3.event.stopPropagation();
+    }
+
+    function getFifoData(callback) {
+      function loadVms() {
+        wiggle.vms.list(function(ids) {
+          var count = ids.length
+          var vmResponse = function(res) {
+            if (res) { //if no res, its the error callback
+              vmHash[res.uuid] = res;
+            }
+            if (--count < 1) {
+              callback();
+            }
+          }
+          ids.forEach(function(id) {
+            wiggle.vms.get({id: id}, vmResponse, vmResponse)
+          })
+        })
+      }
+
+      // kick off
+      wiggle.hypervisors.list(function(ids) {
+        var count = ids.length
+        var hyperResponse = function(res) {
+          if (res) { //if no res, its the error callback
+            hypervisorHash[res.uuid] = res;
+          }
+          if (--count < 1) {
+            loadVms()
+          }
+        }
+        ids.forEach(function(id) {
+          wiggle.hypervisors.get({id: id}, hyperResponse, hyperResponse)
+        })
+      });
+    }
+
+    function assemblePackData() {
+      var result = { name: 'fifo', children: []};
+      var tmp = {};
+      _.each(hypervisorHash, function(res, uuid) {
+        var e = { name: '' + uuid, children: []};
+        result.children.push(e);
+        tmp[uuid] = e;
+      });
+      _.each(vmHash, function(res, uuid) {
+        var e = { name: '' + uuid, size: res.config.ram };
+        tmp[res.hypervisor].children.push(e);
+      });
+      _.each(result.children, function(c) {
+        if (c.children.length <= 0) {
+          delete c.children;
+        }
+      });
+      return result;
+    }
+
+    // internal registers & vars
+    var r, // global radius for svg (biggest circle)
+        node,
+        root,
+        x, // global x axis scale
+        y, // global y axis scale
+        k = 1, // global radius scale
+        canvas, // global canvas handle
+        layout // global layout handle
+        ;
+    var svgTranslateX = 0; // global svg x axis translate (i.e., for centering the graph)
+    var hypervisorHash = {};
+    var vmHash = {};
+
+    // main stuff start here
+    VGCommon.setupVGContainer('.packhierarchy-container');
+
+    // now init canvas and layout
+    canvas = setup('#packhierarchy-container', {w: $('#packhierarchy-container').width(), h: $('#packhierarchy-container').height()});
+    r = Math.min($('#packhierarchy-svg').width(), $('#packhierarchy-svg').height()) - 5;
+    x = d3.scale.linear().range([0, r]).domain([0, r]);
+    y = d3.scale.linear().range([0, r]).domain([0, r]);
+    layout = d3.layout.pack().size([r, r]).value(function(d) { return d.size; });
+
+    setupLayout();
+
+    getFifoData(function() {
+      //console.log('Hypervisors: ', hypervisorHash);
+      //console.log('Vms:', vmHash);
+      loadNodes(assemblePackData());
+    });
+
+    VGCommon.setupVGTabSwitchHandler('#packhierarchy', function() { setupLayout(); });
   });
