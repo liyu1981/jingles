@@ -1,3 +1,8 @@
+<div class="center alert alert-warning alert-dismissible" role="alert" ng-if="cloudStatus.metrics.vms && vms.length && cloudStatus.metrics.vms - vms.length != 0">
+  <button type="button" class="close" data-dismiss="alert"><span aria-hidden="true">&times;</span><span class="sr-only">Close</span></button>
+  <span translate>There is a change in the machines count. Click</span> <a href='javascript:void(0)' class='alert-link' ng-click='loadVms()' translate>here</a> <span translate>to update this page</span>
+</div>
+
 <ul class="list-inline pull-right col-md-6 col-sm-12 col-xs-12">
   <li class='col-md-8 col-sm-9 col-xs-7'>
     <input type="text" class="form-control" placeholder="{{'Filter'|translate}}" ng-model='searchQuery'>

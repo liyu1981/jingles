@@ -29,7 +29,7 @@ angular.module('fifoApp').controller('MachineNewCtrl', function ($scope, wiggle,
 
         var vm = {
             package: $scope.selectedPackage.uuid,
-            dataset: $scope.selectedDataset.dataset,
+            dataset: $scope.selectedDataset.uuid,
             config: {
                 networks: {},
                 metadata: {},
@@ -98,7 +98,7 @@ angular.module('fifoApp').controller('MachineNewCtrl', function ($scope, wiggle,
 
         var vm = {
             package: $scope.selectedPackage.uuid,
-            dataset: $scope.selectedDataset.dataset,
+            dataset: $scope.selectedDataset.uuid,
             config: {
                 networks: {},
                 metadata: {},

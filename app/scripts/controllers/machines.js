@@ -160,8 +160,6 @@ angular.module('fifoApp')
     }
   })
 
-  var requestsPromise = startRequests()
-
   //Legend, how many vms in state x.
   var buildLegend = function() {
     var hist = {}
@@ -175,7 +173,13 @@ angular.module('fifoApp')
       $scope.legend.push({state: k, count: hist[k].count, _state_label: hist[k]._state_label})
   }
 
-  requestsPromise.then(buildLegend)
+  var requestsPromise
+  $scope.loadVms = function() {
+    requestsPromise = startRequests()
+    requestsPromise.then(buildLegend)
+  }
+
+  $scope.loadVms()
   auth.userPromise().then(function() {
 
     var priorOrderBy = auth.currentUser().mdata('vms_orderBy'),

@@ -33,7 +33,7 @@
             ng-repeat="d in datasets | filter:{imported: 1} | orderBy: ['-os', 'name', '-version']"
             ng-click='click_dataset(d)'
             ng-show='showAllVersions || latestDatasets[d.name] == d.version'
-            ng-class="selectedDataset.dataset==d.dataset && 'success'">
+            ng-class="selectedDataset.uuid==d.uuid && 'success'">
           <td><img jq-run='tooltip' ng-src="images/logos/{{d.os || 'unknown'}}.png" class='oslogo' /></td>
           <td class="nowrap {{latestDatasets[d.name] == d.version && 'strong' || ''}}" title='{{d.description}}' jq-run='tooltip' jq-options="{container: 'body'}">{{d.name}}</td>
           <td>{{d.version}}</td>

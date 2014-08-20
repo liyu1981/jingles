@@ -10,41 +10,41 @@
         <div class="tab-content">
           <div class="tab-pane active" id="installed">
 
-              <div class="alert alert-info" ng-if='datasets && (datasets|hash2array).length === 0'><span translate>Please import a dataset using the 'Remote datasets' tab.</span></div>
-              <table class="table table-condensed table-hover" ng-if='(datasets|hash2array).length !== 0'>
-                <thead>
-                  <tr>
-                    <th></th>
-                    <th translate>Name</th>
-                    <th translate>Description</th>
-                    <th style= translate>Status</th>
-                    <th translate>Type</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr ng-repeat="data in datasets | hash2array | orderBy: ['-os', 'name','-version']">
-                    <td width='1%'><img title='{{data.os}}' jq-run='tooltip' class='oslogo' ng-src="images/logos/{{data.os || 'unknown'}}.svg" onerror='this.src="images/logos/unknown.svg"'></td>
+            <div class="alert alert-info" ng-if='datasets && (datasets|hash2array).length === 0'><span translate>Please import a dataset using the 'Remote datasets' tab.</span></div>
+            <table class="table table-condensed table-hover" ng-if='(datasets|hash2array).length !== 0'>
+              <thead>
+                <tr>
+                  <th></th>
+                  <th translate>Name</th>
+                  <th translate>Description</th>
+                  <th style= translate>Status</th>
+                  <th translate>Type</th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr ng-repeat="data in datasets | hash2array | orderBy: ['-os', 'name','-version']">
+                  <td width='1%'><img title='{{data.os}}' jq-run='tooltip' class='oslogo' ng-src="images/logos/{{data.os || 'unknown'}}.svg" onerror='this.src="images/logos/unknown.svg"'></td>
 
-                    <td width='20%'><a href='#/datasets/{{data.dataset}}' title='{{data.dataset}}' jq-run='tooltip'>{{data.name}} {{data.version && '(' + data.version + ')'}}</a></td>
+                  <td width='20%'><a href='#/datasets/{{data.uuid}}' title='{{data.uuid}}' jq-run='tooltip'>{{data.name}} {{data.version && '(' + data.version + ')'}}</a></td>
 
-                    <td class='describe'>
-                      <a ng-href='{{data.metadata.homepage}}' ng-if='data.metadata.homepage' target=_blank><i class='glyphicon glyphicon-info-sign'></i></a>
-                      <span>{{data.description}}</span>
-                    </td>
+                  <td class='describe'>
+                    <a ng-href='{{data.metadata.homepage}}' ng-if='data.metadata.homepage' target=_blank><i class='glyphicon glyphicon-info-sign'></i></a>
+                    <span>{{data.description}}</span>
+                  </td>
 
-                    <td class='nowrap' width='1%'>
-                      <span class='label' ng-class="{'label-warning': data.status=='importing' || data.status=='pending', 'label-danger': data.status=='failed', 'label-success': data.status=='imported'}">{{data.status}}</span>
-                      <small class='text-muted' ng-show="data.imported < 1"> {{(data.imported * 100).toFixed(1)}}%</small>
+                  <td class='nowrap' width='1%'>
+                    <span class='label' ng-class="{'label-warning': data.status=='importing' || data.status=='pending', 'label-danger': data.status=='failed', 'label-success': data.status=='imported'}">{{data.status}}</span>
+                    <small class='text-muted' ng-show="data.imported < 1"> {{(data.imported * 100).toFixed(1)}}%</small>
 
-                    </td>
-                    <td class='light' width='1%'>{{data.type}}</td>
-                    <td width='1%'>
-                      <i permission=['datasets','{{data.dataset}}','delete'] ng-show="data.status=='imported'" ng-click="delete(data)" jq-run="tooltip" class="glyphicon glyphicon-remove-sign clickable" title="Delete" bs-modal="'views/partials/modal-confirm.html'"></i>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
+                  </td>
+                  <td class='light' width='1%'>{{data.type}}</td>
+                  <td width='1%'>
+                    <i permission=['datasets','{{data.uuid}}','delete'] ng-show="data.status=='imported'" ng-click="delete(data)" jq-run="tooltip" class="glyphicon glyphicon-remove-sign clickable" title="Delete" bs-modal="'views/partials/modal-confirm.html'"></i>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
 
           </div>
           <div class="tab-pane table-responsive" id="datasetsat">
@@ -75,8 +75,8 @@
                             ng-hide="data.imported == 1"
                             ng-click='import(data.uuid)'
                             permission=['cloud','datasets','import']>
-                            <i class='glyphicon glyphicon-download-alt'></i>
-                            <span translate>Import</span>
+                      <i class='glyphicon glyphicon-download-alt'></i>
+                      <span translate>Import</span>
                     </button>
                   </td>
                   <td width='1%'><span title="{{data.published_at | date:'medium'}}" jq-run='tooltip' am-time-ago='data.published_at' class='nowrap'></span></td>
@@ -136,9 +136,9 @@
                         </td>
                     </tr>
                 </tbody>
-            </table>
+              </table>
 
-            <div>
+              <div>
                 <div class='pull-right'>
                   <button type="button" class="btn btn-default btn-s"
                     ng-click="uploader.newRoundUpload()" ng-disabled="!uploader.canStart()">
@@ -155,8 +155,8 @@
                       <span class="glyphicon glyphicon-trash"></span> Remove
                   </button>
                 </div>
+              </div>
             </div>
-          </div>
 
           </div>
 

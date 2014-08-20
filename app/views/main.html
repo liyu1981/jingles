@@ -1,122 +1,146 @@
 <div class="row" ng-show='user'>
-	<div class="col-md-6">
+  <div class="col-md-12" ng-hide="has_s3">
+    <div class="panel panel-warning">
+      <div class="panel-heading">
+        <span class="panel-title">
+          <span translate>Deprecation warning!</span>
+        </span>
+      </div>
+      <div class="panel-body">
+        <p>
+          The internal image storage is deprecated! For this release there is no impact on opperations, however over the next couple of releases support for the internal storage will be slowly removed with the following plan (performed step marked in bod):<br/>
+          <ul>
+            <li>0.6.0 <b>Add deprecation warning</b></li>
+            <li>0.6.0 <b>Provide LeoFS all in one dataset</b></li>
+            <li>0.6.1 Provide capability to convert from internal to LeoFS Storage.</li>
+            <li>0.6.1 Disable import of new datasets into interla store.</li>
+            <li>0.6.2 Remove internal daataset store.</li>
+          </ul>
+        </p>
+      </div>
+    </div>
 
-		<div class="welcome">
-			<h3 translate>Welcome {{user.name}}!</h3>
+  </div>
+  <div class="col-md-6">
 
-			<p class='text-danger' ng-show='cloudStatus.no_servers === true'>
-				No servers detected.<br/>
-				Please check if chunter is running ok.<br/>
-				Check out the <a href='https://project-fifo.net/display/PF/Problem+Checklist'>problem's checklist</a>.
-			</p>
+    <div class="welcome">
+      <h3 translate>Welcome {{user.name}}!</h3>
 
-			<p ng-show='activeOrg'><span translate>You are part of</span> <u>{{activeOrg.name}}</u>.</p>
-			<p ng-show='user._roles.length>0'><span translate>You roles are</span>: 
-				<span ng-repeat='g in user._roles'>{{g.name}}</span>
-			</p>
-			<p ng-show='keys > 0' translate>SSH keys configured: {{keys}}</p>
-			<p ng-show='keys < 1' translate>No ssh keys found on your account. Dont forget to <a href='#/configuration/users/{{user.uuid}}'>add one</a>! </p>
+      <p class='text-danger' ng-show='cloudStatus.no_servers === true'>
+        No servers detected.<br/>
+        Please check if chunter is running ok.<br/>
+        Check out the <a href='https://project-fifo.net/display/PF/Problem+Checklist'>problem's checklist</a>.
+      </p>
 
-			<p translate ng-show="cloudStatus.cloud_status && cloudStatus.metrics.storage != 's3'">Tip: You can <a href='https://project-fifo.net/display/PF/LeoFS'>configure</a> Fifo to backup machine's into an S3 compatible service. Then, you will see a 'Versioning' tab on each machine page that lets you work with the backups.</p>
-		</div>
+      <p ng-show='activeOrg'><span translate>You are part of</span> <u>{{activeOrg.name}}</u>.</p>
+      <p ng-show='user._roles.length>0'><span translate>You roles are</span>:
+        <span ng-repeat='g in user._roles'>{{g.name}}</span>
+      </p>
+      <p ng-show='keys > 0' translate>
+        SSH keys configured: {{keys}}
+      </p>
+      <p ng-show="keys < 1" translate>No ssh keys found on your account. Dont forget to <a href="#/configuration/users/{{user.uuid}}">add one</a>!
+      </p>
+      <p translate ng-show="cloudStatus.cloud_status && cloudStatus.metrics.storage != 's3'">
+        Tip: You can <a href='https://project-fifo.net/display/PF/LeoFS'>configure</a> Fifo to backup machine's into an S3 compatible service. Then, you will see a 'Versioning' tab on each machine page that lets you work with the backups.
+      </p>
+    </div>
 
-		<div class="link-boxes">
+    <div class="link-boxes">
+      <a href='#/machines' permission=['cloud','vms','list']>
+        <i class="glyphicon glyphicon-list"></i>
+        <span translate>Machines</span>
+      </a>
+      <a href='#/machines/new' permission=['cloud','vms','create']>
+        <i class="glyphicon glyphicon-plus"></i>
+        <span translate>New Machine</span>
+      </a>
+      <a href='#/groupings' permission=['cloud','grouping','list']>
+        <i class="glyphicon glyphicon-th-large"></i>
+        <span translate>Stacks & Clusters</span>
+      </a>
+      <a href='#/servers/topology' permission=['cloud','hypervisors','list']>
+        <i class="glyphicon glyphicon-dashboard"></i>
+        <span translate>Servers Topology</span>
+      </a>
+      <a href='#/visualizations/graph' permission=['cloud','vms','list']>
+        <i class="glyphicon glyphicon-cloud"></i>
+        <span translate>Cloud View</span>
+      </a>
+      <a href='https://project-fifo.net/' target='_new'>
+        <i class="glyphicon glyphicon-info-sign"></i>
+        <span translate>FiFo Home</span>
+      </a>
+    </div>
 
-			<a href='#/machines' permission=['cloud','vms','list']>
-				<i class="glyphicon glyphicon-list"></i>
-				<span translate>Machines</span>
-			</a>
-			<a href='#/machines/new' permission=['cloud','vms','create']>
-				<i class="glyphicon glyphicon-plus"></i>
-				<span translate>New Machine</span>
-			</a>			
-			<a href='#/groupings' permission=['cloud','grouping','list']>
-				<i class="glyphicon glyphicon-th-large"></i>
-				<span translate>Stacks & Clusters</span>
-			</a>
-			<a href='#/servers/topology' permission=['cloud','hypervisors','list']>
-				<i class="glyphicon glyphicon-dashboard"></i>
-				<span translate>Servers Topology</span>
-			</a>
-			<a href='#/visualizations/graph' permission=['cloud','vms','list']>
-				<i class="glyphicon glyphicon-cloud"></i>
-				<span translate>Cloud View</span>
-			</a>
-			<a href='https://project-fifo.net/' target='_new'>
-				<i class="glyphicon glyphicon-info-sign"></i>
-				<span translate>FiFo Home</span>
-			</a>
-		</div>
 
+    <div class="panel panel-primary" ng-show='(cloudStatus.messages | filter:{ok: !true}).length > 0'>
+      <div class="panel-heading">
+        <span class="panel-title" translate>Messages</span>
+      </div>
+      <table class="table table-condensed">
+        <tr>
+          <th translate>Category</th>
+          <th translate>Element</th>
+          <th translate>Message</th>
+          <th></th>
+        </tr>
+        <tr class='{{msgTrClass(msg.type)}}' ng-repeat='msg in cloudStatus.messages | filter:{ok: !true}'>
+          <td>{{msg.category}}</td>
+          <td>{{msg.element}}</td>
+          <td>{{msg.message}}</td>
+          <td><a ng-href='{{msg.link}}' ng-if='msg.link'><i class='glyphicon glyphicon-search'></i></a></td>
+        </tr>
+      </table>
+    </div>
+  </div>
 
-		<div class="panel panel-primary" ng-show='(cloudStatus.messages | filter:{ok: !true}).length > 0'>
-			<div class="panel-heading">
-				<span class="panel-title" translate>Messages</span>
-			</div>
-			<table class="table table-condensed">
-				<th translate>Category</th>
-				<th translate>Element</th>
-				<th translate>Message</th>
-				<th></th>
-			</tr>
-			<tr class='{{msgTrClass(msg.type)}}' ng-repeat='msg in cloudStatus.messages | filter:{ok: !true}'>
-				<td>{{msg.category}}</td>
-				<td>{{msg.element}}</td>
-				<td>{{msg.message}}</td>
-				<td><a ng-href='{{msg.link}}' ng-if='msg.link'><i class='glyphicon glyphicon-search'></i></a></td>
-			</tr>
-		</table>
-	</div>
-</div>
+  <div class="col-md-6" ng-show='cloudStatus.metrics'>
+    <div class="panel {{cloudStatus.cloud_ok? 'panel-success': 'panel-danger'}}">
+      <div class="panel-heading">
+        <span class="panel-title"><i class="glyphicon glyphicon-cloud"></i>
+          <span ng-show='cloudStatus.cloud_ok' translate>Your cloud is fine!</span>
+          <span ng-hide='cloudStatus.cloud_ok' translate>Your cloud needs some attention!</span>
+        </span>
+      </div>
+      <div class="panel-body">
 
-<div class="col-md-6" ng-show='cloudStatus.metrics'>
-	<div class="panel {{cloudStatus.cloud_ok? 'panel-success': 'panel-danger'}}">
-		<div class="panel-heading">
-			<span class="panel-title"><i class="glyphicon glyphicon-cloud"></i> 
-				<span ng-show='cloudStatus.cloud_ok' translate>Your cloud is fine!</span>
-				<span ng-hide='cloudStatus.cloud_ok' translate>Your cloud needs some attention!</span>
-			</span>
-		</div>
-		<div class="panel-body">
+        <div class="row">
+          <div class="widget big">
+            <h4 translate>Memory</h4>
+            <span>{{cloudStatus.messages[0].percent  || '0'}}%</span>
+            <gauge ng-model='cloudStatus.messages[0].percent'></gauge>
+            <div>{{cloudStatus.metrics['provisioned-memory'] || 0 | Mbytes}} of {{cloudStatus.metrics['total-memory'] || 0 | Mbytes}}</div>
+          </div>
+          <div class="widget big">
+            <h4 translate>Disk usage</h4>
+            <span>{{cloudStatus.messages[1].percent || '0'}}%</span>
+            <gauge ng-model='cloudStatus.messages[1].percent'></gauge>
+            <div>{{cloudStatus.metrics.used || 0 | Mbytes}} of {{cloudStatus.metrics.size || 0 | Mbytes}}</div>
+          </div>
+        </div>
+        <hr/>
+        <div class="widget">
+          <a href="#/machines" class='nocolor'>
+            <h4>{{cloudStatus.metrics.vms}}</h4>
+            <div translate>Machines</div>
+          </a>
+        </div>
 
-			<div class="row">
-				<div class="widget big">
-					<h4 translate>Memory</h4>
-					<span>{{cloudStatus.messages[0].percent  || '0'}}%</span>
-					<gauge ng-model='cloudStatus.messages[0].percent'></gauge>
-					<div>{{cloudStatus.metrics['provisioned-memory'] || 0 | Mbytes}} of {{cloudStatus.metrics['total-memory'] || 0 | Mbytes}}</div>
-				</div>
-				<div class="widget big">
-					<h4 translate>Disk usage</h4>
-					<span>{{cloudStatus.messages[1].percent || '0'}}%</span>
-					<gauge ng-model='cloudStatus.messages[1].percent'></gauge>
-					<div>{{cloudStatus.metrics.used || 0 | Mbytes}} of {{cloudStatus.metrics.size || 0 | Mbytes}}</div>
-				</div>
-			</div>
-			<hr/>
-			<div class="widget">
-				<a href="#/machines" class='nocolor'>
-					<h4>{{cloudStatus.metrics.vms}}</h4>
-					<div translate>Machines</div>
-				</a>
-			</div>
+        <div class="widget">
+          <a href="#/configuration/users" class='nocolor'>
+            <h4>{{cloudStatus.metrics.users}}</h4>
+            <div translate>Users</div>
+          </a>
+        </div>
 
-			<div class="widget">
-				<a href="#/configuration/users" class='nocolor'>
-					<h4>{{cloudStatus.metrics.users}}</h4>
-					<div translate>Users</div>
-				</a>
-			</div>
-
-			<div class="widget">
-				<a href="#/servers" class='nocolor'>
-					<h4>{{cloudStatus.metrics.hypervisors.length || 0}}</h4>
-					<div translate>Servers</div>
-				</a>
-			</div>
-
-		</div>
-	</div>
-</div>
-
+        <div class="widget">
+          <a href="#/servers" class='nocolor'>
+            <h4>{{cloudStatus.metrics.hypervisors.length || 0}}</h4>
+            <div translate>Servers</div>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
 </div>

@@ -3,8 +3,9 @@
 angular.module('fifoApp')
     .controller('ServerCtrl', function ($scope, $routeParams, $location, utils, wiggle, vmService, status, breadcrumbs) {
 
-        var uuid = $routeParams.uuid
-        $scope.characteristics = []
+        $scope.grafana = Config.grafana;
+        var uuid = $routeParams.uuid;
+        $scope.characteristics = [];
 
         var size = 30;
         var usr = [];

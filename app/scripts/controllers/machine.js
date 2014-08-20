@@ -3,6 +3,7 @@
 angular.module('fifoApp')
     .controller('MachineCtrl', function($scope, $routeParams, $location, wiggle, vmService, status, breadcrumbs, datasetsat) {
 
+        $scope.grafana = Config.grafana;
         $scope.force = false;
         var uuid = $routeParams.uuid;
         var inc_version = function inc_version(v) {
