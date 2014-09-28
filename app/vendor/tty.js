@@ -76,9 +76,16 @@
         open = tty.elements.open;
         lights = tty.elements.lights;
 
-        var init_socket;
-        init_socket = function (atty) {
-            atty.socket = new WebSocket(window.location.protocol.replace(/^http/, "ws")+"//"+window.location.host+ "/api/0.1.0/vms/" + uuid + "/console");
+        var init_socket = function (atty) {
+            // url scheme: ws://<apihost>:<apiport>/api/<apiversion>/vms/<vmuuid>/console
+            //   such as: "ws://192.168.1.100:9000/api/0.1.0/vms/4e7bdbfd-87c3-4863-90a1-c6f77746f57b/console"
+            var ttyProxyHost = Config.ttyProxyHost || $(document).getUrlParam('host') || window.location.host;
+            var ttyProxyPort = Config.ttyProxyPort || $(document).getUrlParam('port') || window.location.port;
+            var apiversion = Config.apiVersion || '0.1.0';
+            var wsurl = 'ws://' + ttyProxyHost + ':' + ttyProxyPort + '/api/' + apiversion + '/vms/' + uuid + '/console';
+            console.log('will construct atty with: ', wsurl);
+            atty.socket = new WebSocket(wsurl);
+
             setInterval(function () {
                 atty.socket.send("");
             }, 5000);

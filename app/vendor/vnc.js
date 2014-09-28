@@ -39,8 +39,8 @@ $(function () {
     // By default, use the host and port of server that served this file
 
     var uuid= $(document).getUrlParam("uuid");
-    var host = $(document).getUrlParam("host") || WebUtil.getQueryVar('host', window.location.hostname);
-    var port = $(document).getUrlParam("port") || WebUtil.getQueryVar('port', window.location.port);
+    var host = Config.vncProxyHost || $(document).getUrlParam("host") || WebUtil.getQueryVar('host', window.location.hostname);
+    var port = Config.vncProxyPort || $(document).getUrlParam("port") || WebUtil.getQueryVar('port', window.location.port);
     if (port == "") {
         if (window.location.protocol === "https:") {
             port = "443";

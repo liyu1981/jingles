@@ -27,6 +27,18 @@ Config = {
     ],
 
     /*
+     * tty (console) proxy setting
+     */
+    // ttyProxyHost: '192.168.0.1',
+    // ttyProxyPort: '8888',
+
+    /*
+     * vnc proxy setting
+     */
+    // vncProxyHost: '192.168.0.1',
+    // vncProxyPort: '8888',
+
+    /*
      * The URL of the remote dataset repository
      *
     */

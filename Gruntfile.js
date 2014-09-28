@@ -94,7 +94,7 @@ module.exports = function (grunt) {
                     type: 'list',
                     n: 4
                 }
-            } 
+            }
         },
 
         watch: {
@@ -135,8 +135,8 @@ module.exports = function (grunt) {
             proxies: [
                 {
                     context: '/api',
-                    host: grunt.option('proxy'), //i.e. grunt server --proxy=YOUR_WIGGLE   
-		            port: grunt.option('port') || 80,
+                    host: grunt.option('proxy'), //i.e. grunt server --proxy=YOUR_WIGGLE
+                    port: grunt.option('port') || 80,
                     // port: 443,
                     // https: true,
                     // ws: true

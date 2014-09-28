@@ -1,24 +1,31 @@
 'use strict';
 
 angular.module('fifoApp').factory('wiggle', function ($resource, $http, $cacheFactory, $q, $cookies) {
-
     var endpoint;
-    function setEndpoint(url) {
 
+    // simple function to parse url string
+    function parseURL(url) {
+      var a = document.createElement('a');
+      a.href = url;
+      return {
+        source: url,
+        protocol: (a.protocol.length <= 0) ? window.location.protocol : a.protocol.replace(':',''),
+        host: (a.hostname.length <=0 ) ? window.location.host : a.hostname,
+        port: (a.port.length <= 0) ? '80' : a.port
+      };
+    }
+
+    function setEndpoint(url) {
+        var urlObj = parseURL(url);
         var path = '/api/' + (Config.apiVersion || '0.1.0') + '/';
 
-        //The port : needs to be escaped to \\:
-        if (url.split(':').length>2)
-            endpoint = url.replace(/:([^:]*)$/,'\\:'+'$1') + path;
-        else
-            endpoint = url + path;
+        endpoint = urlObj.protocol + '://' + urlObj.host + ':' + urlObj.port + path;
+        Config.endpoint = endpoint;
 
         setUpServices();
 
-        //Howl endpoint.
-        Config.endpoint = endpoint;
-        var tmp = url || (window.location.protocol + '//' + window.location.host);
-        Config.wsUrl = Config.wsUrl || tmp.replace(/^http/, "ws");
+        // Howl endpoint.
+        Config.wsUrl = Config.wsUrl || ('ws://' + urlObj.host + ':' + urlObj.port);
         Config.apiPath = path;
     }
 
